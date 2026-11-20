@@ -184,11 +184,11 @@ fun ChatHistoryDrawer(
         val byAgent = (if (jarvisFilter) jarvisConversations
         else agentFilter?.let { a -> conversations.filter { it.agent == a } } ?: conversations)
             .filter { (it.id in archivedIds) == showArchived }
-        if (searchQuery.isBlank()) byAgent
-        else byAgent.filter {
-            it.title.contains(searchQuery, ignoreCase = true) ||
-                    (it.subagentRole != null && it.subagentRole.contains(searchQuery, ignoreCase = true))
-        }
+        uniqueConversations(if (searchQuery.isBlank()) byAgent
+            else byAgent.filter {
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                        (it.subagentRole != null && it.subagentRole.contains(searchQuery, ignoreCase = true))
+            })
     }
 
     val allFilteredIds = remember(filtered) { filtered.map { it.id }.toSet() }
@@ -1480,6 +1480,10 @@ private fun formatRelativeTime(timestampMillis: Long): String {
     }
 }
 
+/** LazyColumn keys must be unique even while different backends report the same chat. */
+internal fun uniqueConversations(conversations: List<Conversation>): List<Conversation> =
+    conversations.distinctBy { it.id }
+
 private data class VisibleChatTreeItem(
     val conv: Conversation,
     val depth: Int,
@@ -2025,7 +2029,7 @@ fun SearchChatsDialog(
             }
 
             matchesTime && matchesWorkspace && matchesQuery
-        }
+        }.let(::uniqueConversations)
     }
 
     Dialog(

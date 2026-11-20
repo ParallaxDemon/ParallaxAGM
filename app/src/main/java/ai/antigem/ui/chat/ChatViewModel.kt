@@ -828,6 +828,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             (if (AgentKind.OPENCODE in enabled) lists[2] else emptyList()) + (if (AgentKind.CODEX in enabled) lists[3] else emptyList()) +
             (if (AgentKind.PARALLAXAI in enabled) lists[4] else emptyList()))
             .sortedByDescending { it.updatedAt }
+            .distinctBy { it.id }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /**

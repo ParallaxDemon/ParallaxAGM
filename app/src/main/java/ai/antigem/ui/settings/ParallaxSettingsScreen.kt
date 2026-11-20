@@ -34,7 +34,7 @@ import ai.antigem.ui.components.bouncyVerticalScroll
 
 /** ParallaxAI agent connection settings: panel URL, API key, job timeout and conversation context length. */
 @Composable
-fun ParallaxSettingsScreen(cardBg: androidx.compose.ui.graphics.Color, cardBorder: androidx.compose.ui.graphics.Color) {
+fun ParallaxSettingsScreen(cardBg: androidx.compose.ui.graphics.Color, cardBorder: androidx.compose.foundation.BorderStroke) {
     val context = LocalContext.current
     val prefs = remember { ParallaxPreferences(context) }
     val base by prefs.baseUrl.collectAsState()
@@ -63,7 +63,7 @@ fun ParallaxSettingsScreen(cardBg: androidx.compose.ui.graphics.Color, cardBorde
         )
 
         Column(
-            Modifier.fillMaxWidth().background(cardBg, RoundedCornerShape(12.dp)).border(1.dp, cardBorder, RoundedCornerShape(12.dp)).padding(14.dp),
+            Modifier.fillMaxWidth().background(cardBg, RoundedCornerShape(12.dp)).border(cardBorder, RoundedCornerShape(12.dp)).padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             OutlinedTextField(

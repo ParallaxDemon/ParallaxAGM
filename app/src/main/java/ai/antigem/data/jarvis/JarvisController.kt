@@ -1753,8 +1753,9 @@ object JarvisController {
             Result.success(b.effortsOf(modelId ?: b.selectedModelId.value).ifEmpty { CODEX_EFFORT_LEVELS })
         }
         AgentKind.AGY -> Result.failure(IllegalArgumentException(
-        AgentKind.PARALLAXAI -> Result.failure(IllegalArgumentException(
             "AGY has no separate effort: each thinking level is its own model. Pick that model with model / jarvis_set_model (see jarvis_list_models)."))
+        AgentKind.PARALLAXAI -> Result.failure(IllegalArgumentException(
+            "ParallaxAI has no separate effort: the panel's DeepSeek model is fixed. Pick a model in the panel itself."))
         AgentKind.OPENCODE -> Result.failure(IllegalArgumentException(
             "OpenCode chats have no effort setting in the app. Pick the model with model / jarvis_set_model."))
     }

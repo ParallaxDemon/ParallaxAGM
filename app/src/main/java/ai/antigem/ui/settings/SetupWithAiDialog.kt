@@ -115,9 +115,13 @@ fun repoSetupPrompt(source: String, agent: AgentKind, kind: RepoSetupKind): Stri
             "Check with `codex plugin list`."
         )
         AgentKind.AGY -> listOf(
-        AgentKind.PARALLAXAI -> listOf(
             "A plugin (plugin.json at the top, or a Claude Code plugin or marketplace): `agy plugin install https://github.com/<owner>/<repo>` (the full https link; owner/repo alone does not work), or clone it and run `agy plugin install <folder>`.",
             "Check with `agy plugin list`."
+        )
+        AgentKind.PARALLAXAI -> listOf(
+            "ParallaxAI runs its tools on the server; repository setup is handled by the panel's worker. " +
+                "Ask the panel to install the repository's skills, plugins and MCP servers.",
+            "Check the panel status with `parallax status` in the terminal."
         )
         AgentKind.OPENCODE -> listOf(
             "OpenCode plugins are JavaScript packages: `opencode plugin add <npm package or git link>`.",

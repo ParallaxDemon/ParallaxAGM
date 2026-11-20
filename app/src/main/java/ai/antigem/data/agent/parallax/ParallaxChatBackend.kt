@@ -58,7 +58,7 @@ class ParallaxChatBackend(
     val isCurrentChatActivelyRunning: StateFlow<Boolean> = _isStreaming.asStateFlow()
 
     /** The panel has no model picker in the app; the worker uses its configured DeepSeek model. */
-    val availableModels: StateFlow<List<AiModel>> = MutableStateFlow(emptyList()).asStateFlow()
+    val availableModels: StateFlow<List<AiModel>> = MutableStateFlow<List<AiModel>>(emptyList()).asStateFlow()
     val isRefreshingModels: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
     val selectedModelId: StateFlow<String> = MutableStateFlow("deepseek-r1-distill-1.5b").asStateFlow()
 

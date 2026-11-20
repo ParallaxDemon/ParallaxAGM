@@ -5,5 +5,7 @@ enum class AgentKind {
     AGY,
     CLAUDE,
     OPENCODE,
-    CODEX
+    CODEX,
+    /** ParallaxAI: DeepSeek chats through the ParallaxAI server API, with the conversation kept as context. */
+    PARALLAXAI
 }

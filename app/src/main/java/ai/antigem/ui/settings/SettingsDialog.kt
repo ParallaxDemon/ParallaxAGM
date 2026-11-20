@@ -110,6 +110,8 @@ enum class SettingsSection(val title: String, val subtitle: String) {
     /** One OpenCode page (which one: the dialog's openCodePage). */
     OPENCODE_PAGE("OpenCode", "Server, providers, endpoints, MCP & approvals"),
     CODEX("Codex", "Account, usage limits, permissions, MCP, server & install"),
+    /** ParallaxAI: panel URL, API key and conversation context for the server-backed agent. */
+    PARALLAXAI("ParallaxAI", "Panel URL, API key, job timeout and conversation context"),
     /** One Codex page (which one: the dialog's codexPage). */
     CODEX_PAGE("Codex", "Account, usage limits, permissions, MCP, server & install"),
     AGENTS("Agents", "Run Antigravity, Claude Code, OpenCode, Codex or several"),
@@ -162,6 +164,7 @@ enum class SettingsSection(val title: String, val subtitle: String) {
         CLAUDE_PAGE -> CLAUDE
         OPENCODE_PAGE -> OPENCODE
         CODEX_PAGE -> CODEX
+        PARALLAXAI -> MAIN
         TERMUX_API, X11_DESKTOP -> TERMUX_SUPPORT
         REA_GROUPS -> REA
         GLOBAL_CONTEXT, AGENT_MEMORY -> AGENTS
@@ -691,6 +694,7 @@ fun SettingsDialog(
                             currentSection = SettingsSection.CODEX_PAGE
                         }
                     }
+                    SettingsSection.PARALLAXAI -> ParallaxSettingsScreen(cardBg, cardBorder)
                     SettingsSection.CODEX_PAGE -> if (codex != null) {
                         ai.antigem.ui.codex.CodexSettingsScreen(
                             codex, codexPage,
@@ -886,6 +890,7 @@ private fun MainSettingsMenu(
                         .joinToString(" + ") {
                             when (it) {
                                 ai.antigem.domain.model.AgentKind.AGY -> "AGY"
+                                ai.antigem.domain.model.AgentKind.PARALLAXAI -> "ParallaxAI"
                                 ai.antigem.domain.model.AgentKind.CLAUDE -> "Claude"
                                 ai.antigem.domain.model.AgentKind.OPENCODE -> "OpenCode"
                                 ai.antigem.domain.model.AgentKind.CODEX -> "Codex"
@@ -903,6 +908,8 @@ private fun MainSettingsMenu(
                     if (openCodeState == ai.antigem.data.agent.opencode.OpenCodeState.READY) QuotaGreen else c.warning) else null,
                 if (codex != null && codexOn) row(SettingsSection.CODEX, Icons.Outlined.Terminal, ai.antigem.ui.components.CodexAccent, codexState?.label,
                     if (codexState == ai.antigem.data.agent.codex.CodexState.READY) QuotaGreen else c.warning) else null,
+                if (ai.antigem.domain.model.AgentKind.PARALLAXAI in enabledAgents)
+                    row(SettingsSection.PARALLAXAI, Icons.Outlined.Cloud, ai.antigem.ui.components.ParallaxAccent, "Server API") else null,
                 row(SettingsSection.JARVIS, Icons.Outlined.RecordVoiceOver, c.accentTeal, if (jarvisOn) "On" else "Off",
                     if (jarvisOn) QuotaGreen else null)
             ),

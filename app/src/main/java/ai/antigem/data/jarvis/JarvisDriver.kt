@@ -46,6 +46,10 @@ object JarvisDriver {
                 val c = vm.agyBackend.conversations.value.find { it.id == id }
                 c != null && vm.systemConnectionState.value.isHubOnline && (c.isRunning || c.notFullyIdle)
             }
+            AgentKind.PARALLAXAI -> {
+                val c = vm.agyBackend.conversations.value.find { it.id == id }
+                c != null && vm.systemConnectionState.value.isHubOnline && (c.isRunning || c.notFullyIdle)
+            }
         }
     }
 
@@ -57,6 +61,7 @@ object JarvisDriver {
             AgentKind.OPENCODE -> openCode.getOrPut(id) { newOpenCode().also { it.selectConversation(id) } }
             AgentKind.CODEX -> codex.getOrPut(id) { newCodex().also { it.selectConversation(id) } }
             AgentKind.AGY -> Unit
+            AgentKind.PARALLAXAI -> Unit
         }
     }
 
@@ -115,6 +120,10 @@ object JarvisDriver {
                 val enum = AgyHubClient.resolveModelEnum(vm.agyBackend.modelOfChat(id))
                 hub.sendUserPrompt(id, text, enum).getOrThrow()
             }
+            AgentKind.PARALLAXAI -> if (screenFree) vm.agyBackend.sendMessage(text) else {
+                val enum = AgyHubClient.resolveModelEnum(vm.agyBackend.modelOfChat(id))
+                hub.sendUserPrompt(id, text, enum).getOrThrow()
+            }
             AgentKind.CODEX -> if (screenFree) vm.codexBackend.sendMessage(text) else {
                 val fresh = !codex.containsKey(id)
                 val b = codex.getOrPut(id) { newCodex().also { it.selectConversation(id) } }
@@ -139,6 +148,7 @@ object JarvisDriver {
             AgentKind.OPENCODE -> (openCode[id] ?: vm.openCodeBackend).interrupt(id)
             AgentKind.CODEX -> (codex[id] ?: vm.codexBackend).interrupt(id)
             AgentKind.AGY -> hub.cancelCascadeInvocation(id)
+            AgentKind.PARALLAXAI -> hub.cancelCascadeInvocation(id)
         }
     }
 
@@ -148,6 +158,7 @@ object JarvisDriver {
         AgentKind.OPENCODE -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.OPENCODE) vm.openCodeBackend.messages.value else openCode[id]?.messages?.value
         AgentKind.CODEX -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.CODEX) vm.codexBackend.messages.value else codex[id]?.messages?.value
         AgentKind.AGY -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.AGY) vm.messages.value else null
+        AgentKind.PARALLAXAI -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.AGY) vm.messages.value else null
     }
 
     /** The tool the chat's current reply is running, if any. */

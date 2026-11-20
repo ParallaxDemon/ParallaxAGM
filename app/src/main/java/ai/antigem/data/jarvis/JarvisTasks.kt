@@ -253,6 +253,18 @@ object JarvisTasks {
                 scope.launch { delay(2500); runCatching { vm.agyBackend.syncAgyConversations(force = true) } }
                 id
             }
+            AgentKind.PARALLAXAI -> {
+                val id = UUID.randomUUID().toString()
+                val chosen = modelId?.takeIf { it.isNotBlank() } ?: vm.agyBackend.selectedModelId.value
+                val enum = AgyHubClient.resolveModelEnum(chosen)
+                val ws = projectPath ?: (ai.antigem.data.daemon.IdeDaemonManager.activeProject.value?.path
+                    ?: ai.antigem.data.local.LocalEnvironmentManager.getHomeDir(app).absolutePath)
+                hub.startCascade(id, enum, if (ws.startsWith("file://")) ws else "file://$ws").getOrThrow()
+                vm.agyBackend.rememberChatModel(id, chosen)
+                hub.sendUserPrompt(id, prompt, enum).getOrThrow()
+                scope.launch { delay(2500); runCatching { vm.agyBackend.syncAgyConversations(force = true) } }
+                id
+            }
         }
         val task = Task(
             id = id, agent = agent,
@@ -309,6 +321,10 @@ object JarvisTasks {
                 val enum = AgyHubClient.resolveModelEnum(vm.agyBackend.modelOfChat(t.id))
                 hub.sendUserPrompt(t.id, outgoing, enum).getOrElse { return "Could not send: ${it.message}" }
             }
+            AgentKind.PARALLAXAI -> {
+                val enum = AgyHubClient.resolveModelEnum(vm.agyBackend.modelOfChat(t.id))
+                hub.sendUserPrompt(t.id, outgoing, enum).getOrElse { return "Could not send: ${it.message}" }
+            }
             AgentKind.OPENCODE -> {
                 if (vm.currentConversation.value?.id == t.id) {
                     vm.openCodeBackend.sendMessage(outgoing)
@@ -343,6 +359,7 @@ object JarvisTasks {
                 else ensureBackend(t.id).stopStreaming()
             }
             AgentKind.AGY -> hub.cancelCascadeInvocation(t.id).onFailure { return "Could not stop: ${it.message}" }
+            AgentKind.PARALLAXAI -> hub.cancelCascadeInvocation(t.id).onFailure { return "Could not stop: ${it.message}" }
             AgentKind.OPENCODE -> (openCodeBackends[t.id] ?: vm.openCodeBackend).interrupt(t.id).onFailure { return "Could not stop: ${it.message}" }
             AgentKind.CODEX -> (codexBackends[t.id] ?: vm.codexBackend).interrupt(t.id).onFailure { return "Could not stop: ${it.message}" }
         }
@@ -381,6 +398,7 @@ object JarvisTasks {
             AgentKind.OPENCODE -> openCodeBackends[t.id]?.messages?.value?.takeIf { it.isNotEmpty() } ?: runCatching { JarvisController.readChat(t.id) }.getOrDefault(emptyList())
             AgentKind.CODEX -> codexBackends[t.id]?.messages?.value?.takeIf { it.isNotEmpty() } ?: runCatching { JarvisController.readChat(t.id) }.getOrDefault(emptyList())
             AgentKind.AGY -> runCatching { JarvisController.readChat(t.id) }.getOrDefault(emptyList())
+            AgentKind.PARALLAXAI -> runCatching { JarvisController.readChat(t.id) }.getOrDefault(emptyList())
         }
         val text = msgs.lastOrNull { it.role == MessageRole.ASSISTANT && it.content.isNotBlank() }?.content.orEmpty()
         return JarvisText.report(text)
@@ -464,6 +482,7 @@ object JarvisTasks {
         AgentKind.CLAUDE -> claudeBackends[t.id]?.isCurrentChatActivelyRunning?.value == true ||
             (vm.currentConversation.value?.id == t.id && vm.claudeBackend.isCurrentChatActivelyRunning.value)
         AgentKind.AGY -> agyBusy(t.id)
+        AgentKind.PARALLAXAI -> agyBusy(t.id)
         AgentKind.OPENCODE -> openCodeBackends[t.id]?.isCurrentChatActivelyRunning?.value == true ||
             (vm.currentConversation.value?.id == t.id && vm.openCodeBackend.isCurrentChatActivelyRunning.value) ||
             vm.openCodeBackend.conversations.value.any { it.id == t.id && it.isRunning }
@@ -513,6 +532,16 @@ object JarvisTasks {
                 sig = "${msgs.size}:${last?.content?.length}:${last?.toolCalls?.size}:${last?.toolCalls?.lastOrNull()?.status}"
             }
             AgentKind.AGY -> {
+                running = agyBusy(t.id)
+                val c = vm.agyBackend.conversations.value.find { it.id == t.id }
+                sig = "${c?.stepCount}:${c?.updatedAt}"
+                // a step waiting for approval also stops the progress: only then read the steps from the hub
+                if (running && tick % 3 == 0 && now - t.progressAt > 3000) refreshAgyPending(t.id, 4000)
+                else if (!running) clearAgyPending(t.id)
+                needsApproval = running && agyPendingOf(t.id).isNotEmpty() ||
+                    (vm.currentConversation.value?.id == t.id && vm.pendingApprovals.value.isNotEmpty())
+            }
+            AgentKind.PARALLAXAI -> {
                 running = agyBusy(t.id)
                 val c = vm.agyBackend.conversations.value.find { it.id == t.id }
                 sig = "${c?.stepCount}:${c?.updatedAt}"

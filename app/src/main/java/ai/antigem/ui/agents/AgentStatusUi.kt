@@ -191,6 +191,12 @@ fun openCodeStatusEntry(
     }
 }
 
+/** ParallaxAI is a server-backed agent: ready when a panel URL and key are configured (they default to the public panel). */
+fun parallaxStatusEntry(): AgentStatusEntry = AgentStatusEntry(
+    AgentKind.PARALLAXAI, "ParallaxAI", ai.antigem.ui.components.ParallaxAccent,
+    "DeepSeek chats through your ParallaxAI server API", isReady = true
+)
+
 fun codexStatusEntry(
     state: ai.antigem.data.agent.codex.CodexState,
     status: ai.antigem.data.agent.codex.CodexStatus?,
@@ -291,6 +297,7 @@ fun AgentMark(agent: AgentKind, modifier: Modifier = Modifier, size: Dp = 32.dp,
         ) {
             when (agent) {
                 AgentKind.AGY -> Icon(Icons.Outlined.RocketLaunch, null, tint = accent, modifier = Modifier.size(size * 0.52f))
+                AgentKind.PARALLAXAI -> Icon(Icons.Outlined.RocketLaunch, null, tint = accent, modifier = Modifier.size(size * 0.52f))
                 AgentKind.CLAUDE -> Text("✻", color = accent, fontWeight = FontWeight.Bold, fontSize = (size.value * 0.5f).sp)
                 AgentKind.OPENCODE -> Text("</>", color = accent, fontWeight = FontWeight.Bold, fontSize = (size.value * 0.3f).sp, maxLines = 1)
                 AgentKind.CODEX -> Text(">_", color = accent, fontWeight = FontWeight.Bold, fontSize = (size.value * 0.36f).sp, maxLines = 1)

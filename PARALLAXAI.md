@@ -1,5 +1,17 @@
 # ParallaxAI inside AntiGem (ParallaxAGM)
 
+## Two ways to use it
+
+1. **As an agent** — Settings → Agents (or the agent picker on the empty chat screen) now lists
+   **ParallaxAI** next to Antigravity, Claude Code, OpenCode and Codex. Pick it and chat normally:
+   each turn is sent to your ParallaxAI server API with the recent conversation as context, so
+   chats continue across turns. The job runs on GitHub Actions with the panel's tools (analysis,
+   patching, etc.) and the reply appears in the chat when it finishes. API key / panel URL and
+   context length can be changed in the ParallaxAI agent settings (`parallax_prefs`).
+2. **From the terminal** — the `parallax` command described below.
+
+## Terminal client
+
 The ParallaxAI terminal client is bundled into the APK as `assets/bin/parallax`. After the
 app unpacks its Linux environment, the command is available in the in-app terminal at
 `$PREFIX/bin/parallax`. Everything is driven from the terminal: jobs go to the live

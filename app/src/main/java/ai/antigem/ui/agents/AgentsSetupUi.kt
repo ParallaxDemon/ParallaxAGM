@@ -74,6 +74,11 @@ private val AGENT_OPTIONS = listOf(
         AgentKind.CODEX,
         "Codex",
         "OpenAI's Codex CLI on this device: sign in with your ChatGPT account (or an API key)."
+    ),
+    AgentOption(
+        AgentKind.PARALLAXAI,
+        "ParallaxAI",
+        "DeepSeek chats through your ParallaxAI server API. Continuous chats run on GitHub Actions with analysis and patching tools."
     )
 )
 

@@ -101,6 +101,7 @@ object AgentSkillsClient {
         AgentKind.CLAUDE -> "claude"
         AgentKind.CODEX -> "codex"
         AgentKind.AGY -> "agy"
+        AgentKind.PARALLAXAI -> "agy"
         AgentKind.OPENCODE -> "opencode"
     }
 

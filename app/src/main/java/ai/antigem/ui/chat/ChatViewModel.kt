@@ -80,6 +80,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     /** Dictation for Codex chats: the phone's own speech recognizer, in the device's language (Codex has none of its own). */
     val codexVoice = ai.antigem.data.jarvis.AndroidSpeechTranscriber(application) { java.util.Locale.getDefault().toLanguageTag() }
 
+    /** ParallaxAI: DeepSeek chats through the ParallaxAI server API, with the conversation kept as context. */
+    val parallaxPrefs = ai.antigem.data.agent.parallax.ParallaxPreferences(application)
+    val parallaxBackend = ai.antigem.data.agent.parallax.ParallaxChatBackend(application, viewModelScope, store, parallaxPrefs)
+
     /** Agent of the conversation on screen; chat actions go to that agent's backend. */
     val activeAgent: StateFlow<AgentKind> = store.currentConversation
         .map { it?.agent ?: AgentKind.AGY }
@@ -88,6 +92,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val isClaudeActive get() = store.currentConversation.value?.agent == AgentKind.CLAUDE
     private val isOpenCodeActive get() = store.currentConversation.value?.agent == AgentKind.OPENCODE
     private val isCodexActive get() = store.currentConversation.value?.agent == AgentKind.CODEX
+    private val isParallaxActive get() = store.currentConversation.value?.agent == AgentKind.PARALLAXAI
 
     /** Agent used for new chats, picked on the empty chat screen (remembered). */
     val newChatAgent: StateFlow<AgentKind> = claudePrefs.newChatAgent
@@ -105,6 +110,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val isClaudeEnabled get() = AgentKind.CLAUDE in enabledAgents.value
     private val isOpenCodeEnabled get() = AgentKind.OPENCODE in enabledAgents.value
     private val isCodexEnabled get() = AgentKind.CODEX in enabledAgents.value
+    private val isParallaxEnabled get() = AgentKind.PARALLAXAI in enabledAgents.value
 
     /**
      * Applies an agent selection: saves it, starts / stops Claude Code in the app, leaves a chat of a disabled
@@ -155,13 +161,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val noQuotas = MutableStateFlow<List<ModelQuota>>(emptyList())
     private val alwaysFalse = MutableStateFlow(false)
 
-    private fun <T> byAgent(agy: StateFlow<T>, claude: StateFlow<T>, openCode: StateFlow<T>, codex: StateFlow<T>): StateFlow<T> =
-        combine(store.currentConversation, agy, claude, openCode, codex) { conv, a, c, o, x ->
+    private fun <T> byAgent(agy: StateFlow<T>, claude: StateFlow<T>, openCode: StateFlow<T>, codex: StateFlow<T>, parallax: StateFlow<T>): StateFlow<T> =
+        combine(combine(agy, claude, openCode, codex, parallax) { a, c, o, x, p -> listOf(a, c, o, x, p) }, store.currentConversation) { values, conv ->
             when (conv?.agent) {
-                AgentKind.CLAUDE -> c
-                AgentKind.OPENCODE -> o
-                AgentKind.CODEX -> x
-                else -> a
+                AgentKind.CLAUDE -> values[1]
+                AgentKind.OPENCODE -> values[2]
+                AgentKind.CODEX -> values[3]
+                AgentKind.PARALLAXAI -> values[4]
+                else -> values[0]
             }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, agy.value)
 
@@ -201,12 +208,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val isConversationsLoading = agyBackend.isConversationsLoading
     val artifacts = agyBackend.artifacts
     val pendingApprovals = agyBackend.pendingApprovals
-    val isStreaming = byAgent(agyBackend.isStreaming, claudeBackend.isStreaming, openCodeBackend.isStreaming, codexBackend.isStreaming)
-    val availableModels = byAgent(agyBackend.availableModels, claudeBackend.availableModels, openCodeBackend.availableModels, codexBackend.availableModels)
+    val isStreaming = byAgent(agyBackend.isStreaming, claudeBackend.isStreaming, openCodeBackend.isStreaming, codexBackend.isStreaming, parallaxBackend.isStreaming)
+    val availableModels = byAgent(agyBackend.availableModels, claudeBackend.availableModels, openCodeBackend.availableModels, codexBackend.availableModels, parallaxBackend.availableModels)
     val enabledModelIds = agyBackend.enabledModelIds
-    val enabledModels = byAgent(agyBackend.enabledModels, claudeBackend.availableModels, openCodeBackend.availableModels, codexBackend.availableModels)
-    val isRefreshingModels = byAgent(agyBackend.isRefreshingModels, claudeBackend.isRefreshingModels, openCodeBackend.isRefreshingModels, codexBackend.isRefreshingModels)
-    val selectedModelId = byAgent(agyBackend.selectedModelId, claudeBackend.selectedModelId, openCodeBackend.selectedModelId, codexBackend.selectedModelId)
+    val enabledModels = byAgent(agyBackend.enabledModels, claudeBackend.availableModels, openCodeBackend.availableModels, codexBackend.availableModels, parallaxBackend.availableModels)
+    val isRefreshingModels = byAgent(agyBackend.isRefreshingModels, claudeBackend.isRefreshingModels, openCodeBackend.isRefreshingModels, codexBackend.isRefreshingModels, parallaxBackend.isRefreshingModels)
+    val selectedModelId = byAgent(agyBackend.selectedModelId, claudeBackend.selectedModelId, openCodeBackend.selectedModelId, codexBackend.selectedModelId, parallaxBackend.selectedModelId)
     val preferredModelName = agyBackend.preferredModelName
     /**
      * Claude's plan limits as the model pill's quota: the 5-hour limit, or the weekly one (the user's choice in the
@@ -251,9 +258,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             )
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    val quotas = byAgent(agyBackend.quotas, claudeQuotas, noQuotas, codexQuotas)
+    val quotas = byAgent(agyBackend.quotas, claudeQuotas, noQuotas, codexQuotas, noQuotas)
     val quotaSummary = agyBackend.quotaSummary
-    val isLoadingConversation = byAgent(agyBackend.isLoadingConversation, claudeBackend.isLoadingConversation, openCodeBackend.isLoadingConversation, codexBackend.isLoadingConversation)
+    val isLoadingConversation = byAgent(agyBackend.isLoadingConversation, claudeBackend.isLoadingConversation, openCodeBackend.isLoadingConversation, codexBackend.isLoadingConversation, parallaxBackend.isLoadingConversation)
     fun setModelEnabled(modelId: String, isEnabled: Boolean) = agyBackend.setModelEnabled(modelId, isEnabled)
     fun enableAllModels() = agyBackend.enableAllModels()
     val bridgeStatusMessage = agyBackend.bridgeStatusMessage
@@ -340,8 +347,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }.combine(voiceCallActive) { reasons, call -> if (call) listOf("A voice call with Antigravity is on") + reasons else reasons }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    val isCurrentChatActivelyRunning = byAgent(agyBackend.isCurrentChatActivelyRunning, claudeBackend.isCurrentChatActivelyRunning, openCodeBackend.isCurrentChatActivelyRunning, codexBackend.isCurrentChatActivelyRunning)
-    val isCurrentChatBackgroundActive = byAgent(agyBackend.isCurrentChatBackgroundActive, alwaysFalse, alwaysFalse, alwaysFalse)
+    val isCurrentChatActivelyRunning = byAgent(agyBackend.isCurrentChatActivelyRunning, claudeBackend.isCurrentChatActivelyRunning, openCodeBackend.isCurrentChatActivelyRunning, codexBackend.isCurrentChatActivelyRunning, parallaxBackend.isCurrentChatActivelyRunning)
+    val isCurrentChatBackgroundActive = byAgent(agyBackend.isCurrentChatBackgroundActive, alwaysFalse, alwaysFalse, alwaysFalse, alwaysFalse)
     val connectionState = agyBackend.connectionState
     fun refreshActiveInstances() = agyBackend.refreshActiveInstances()
     fun terminateInstance(conversationId: String) = agyBackend.terminateInstance(conversationId)
@@ -351,6 +358,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         if (isClaudeActive) claudeBackend.retryConnections()
         if (isOpenCodeEnabled) openCodeBackend.retryConnections()
         if (isCodexEnabled) codexBackend.retryConnections()
+        if (isParallaxEnabled) parallaxBackend.retryConnections()
     }
     fun onAppForegrounded() {
         agyBackend.onAppForegrounded()
@@ -361,6 +369,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         if (isOpenCodeEnabled) openCodeBackend.onAppForegrounded()
         if (isCodexEnabled) codexBackend.onAppForegrounded()
+        if (isParallaxEnabled) parallaxBackend.onAppForegrounded()
     }
     fun onProjectChanged(projectPath: String) = agyBackend.onProjectChanged(projectPath)
     fun onUserStartedTyping() = agyBackend.onUserStartedTyping()
@@ -377,25 +386,36 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 agyBackend.detach()
                 openCodeBackend.detach()
                 codexBackend.detach()
+                parallaxBackend.detach()
                 claudeBackend.startNewChat()
             }
             AgentKind.OPENCODE -> {
                 agyBackend.detach()
                 claudeBackend.detach()
                 codexBackend.detach()
+                parallaxBackend.detach()
                 openCodeBackend.startNewChat()
             }
             AgentKind.CODEX -> {
                 agyBackend.detach()
                 claudeBackend.detach()
                 openCodeBackend.detach()
+                parallaxBackend.detach()
                 codexBackend.startNewChat()
             }
             AgentKind.AGY -> {
                 claudeBackend.detach()
                 openCodeBackend.detach()
                 codexBackend.detach()
+                parallaxBackend.detach()
                 agyBackend.startNewChat()
+            }
+            AgentKind.PARALLAXAI -> {
+                agyBackend.detach()
+                claudeBackend.detach()
+                openCodeBackend.detach()
+                codexBackend.detach()
+                parallaxBackend.startNewChat()
             }
         }
     }
@@ -406,25 +426,36 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 agyBackend.detach()
                 openCodeBackend.detach()
                 codexBackend.detach()
+                parallaxBackend.detach()
                 claudeBackend.selectConversation(id)
             }
             AgentKind.OPENCODE -> {
                 agyBackend.detach()
                 claudeBackend.detach()
                 codexBackend.detach()
+                parallaxBackend.detach()
                 openCodeBackend.selectConversation(id)
             }
             AgentKind.CODEX -> {
                 agyBackend.detach()
                 claudeBackend.detach()
                 openCodeBackend.detach()
+                parallaxBackend.detach()
                 codexBackend.selectConversation(id)
             }
             AgentKind.AGY -> {
                 claudeBackend.detach()
                 openCodeBackend.detach()
                 codexBackend.detach()
+                parallaxBackend.detach()
                 agyBackend.selectConversation(id)
+            }
+            AgentKind.PARALLAXAI -> {
+                agyBackend.detach()
+                claudeBackend.detach()
+                openCodeBackend.detach()
+                codexBackend.detach()
+                parallaxBackend.selectConversation(id)
             }
         }
     }
@@ -435,6 +466,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             AgentKind.OPENCODE -> openCodeBackend.deleteConversation(id)
             AgentKind.CODEX -> codexBackend.deleteConversation(id)
             AgentKind.AGY -> agyBackend.deleteConversation(id)
+            AgentKind.PARALLAXAI -> parallaxBackend.deleteConversation(id)
         }
         // files the app copied for this chat go with it (never the user's own files picked in Files)
         val copies = ai.antigem.data.files.AttachedFiles.takeCopiesOf(getApplication(), id)
@@ -458,6 +490,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         } else if (agentOf(id) == AgentKind.CLAUDE) {
             agyBackend.detach()
             claudeBackend.forkConversation(id)
+        } else if (agentOf(id) == AgentKind.PARALLAXAI) {
+            agyBackend.detach()
+            claudeBackend.detach()
+            openCodeBackend.detach()
+            codexBackend.detach()
+            parallaxBackend.forkConversation(id)
         } else {
             agyBackend.forkConversation(id)
         }
@@ -466,6 +504,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         isClaudeActive -> claudeBackend.selectModel(modelId)
         isOpenCodeActive -> openCodeBackend.selectModel(modelId)
         isCodexActive -> codexBackend.selectModel(modelId)
+        isParallaxActive -> Unit // the panel's model is fixed by its API key
         else -> agyBackend.selectModel(modelId)
     }
     /**
@@ -525,6 +564,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         isClaudeActive -> claudeBackend.sendMessage(prompt)
         isOpenCodeActive -> openCodeBackend.sendMessage(prompt)
         isCodexActive -> codexBackend.sendMessage(prompt)
+        isParallaxActive -> parallaxBackend.sendMessage(prompt)
         else -> agyBackend.sendMessage(prompt)
     }
 
@@ -639,6 +679,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             AgentKind.OPENCODE -> openCodeBackend.renameConversation(id, title)
             AgentKind.CODEX -> codexBackend.renameConversation(id, title)
             AgentKind.AGY -> agyBackend.renameConversation(id, title)
+            AgentKind.PARALLAXAI -> parallaxBackend.renameConversation(id, title)
         }
     }
 
@@ -649,6 +690,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             AgentKind.OPENCODE -> openCodeBackend.setArchived(id, archived)
             AgentKind.CODEX -> codexBackend.setArchived(id, archived)
             AgentKind.AGY -> agyBackend.setArchived(id, archived)
+            AgentKind.PARALLAXAI -> parallaxBackend.setArchived(id, archived)
         }
     }
 
@@ -660,11 +702,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         isClaudeActive -> claudeBackend.stopStreaming()
         isOpenCodeActive -> openCodeBackend.stopStreaming()
         isCodexActive -> codexBackend.stopStreaming()
+        isParallaxActive -> parallaxBackend.stopStreaming()
         else -> agyBackend.stopStreaming()
     }
 
     /** Messages sent while the agent was working, waiting to be delivered (queued-messages card). */
-    val queuedMessages = byAgent(agyBackend.queuedMessages, claudeBackend.queuedMessages, noQueued, codexBackend.queuedMessages)
+    val queuedMessages = byAgent(agyBackend.queuedMessages, claudeBackend.queuedMessages, noQueued, codexBackend.queuedMessages, noQueued)
     fun sendQueuedNow(id: String) { if (isCodexActive) codexBackend.sendQueuedNow(id) else if (isClaudeActive) claudeBackend.sendQueuedNow(id) else if (!isOpenCodeActive) agyBackend.sendQueuedNow(id) }
     fun deleteQueued(id: String) { if (isCodexActive) codexBackend.deleteQueued(id) else if (!isClaudeActive && !isOpenCodeActive) agyBackend.deleteQueued(id) }
     fun applyQuotaSummary(summary: ai.antigem.domain.model.QuotaSummaryResponse) = agyBackend.applyQuotaSummary(summary)
@@ -757,10 +800,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _conversations = store.conversations
     /** Every conversation of the enabled agents, Jarvis' own chats included. */
-    val allConversations: StateFlow<List<Conversation>> = combine(_conversations, claudeBackend.conversations, openCodeBackend.conversations, codexBackend.conversations, enabledAgents) { agy, claude, openCode, codex, enabled ->
+    val allConversations: StateFlow<List<Conversation>> = combine(
+        combine(_conversations, claudeBackend.conversations, openCodeBackend.conversations, codexBackend.conversations, parallaxBackend.conversations) { agy, claude, openCode, codex, parallax ->
+            listOf(agy, claude, openCode, codex, parallax)
+        },
+        enabledAgents
+    ) { lists, enabled ->
         // a disabled agent's chats stay on disk but are not listed
-        ((if (AgentKind.AGY in enabled) agy else emptyList()) + (if (AgentKind.CLAUDE in enabled) claude else emptyList()) +
-            (if (AgentKind.OPENCODE in enabled) openCode else emptyList()) + (if (AgentKind.CODEX in enabled) codex else emptyList()))
+        ((if (AgentKind.AGY in enabled) lists[0] else emptyList()) + (if (AgentKind.CLAUDE in enabled) lists[1] else emptyList()) +
+            (if (AgentKind.OPENCODE in enabled) lists[2] else emptyList()) + (if (AgentKind.CODEX in enabled) lists[3] else emptyList()) +
+            (if (AgentKind.PARALLAXAI in enabled) lists[4] else emptyList()))
             .sortedByDescending { it.updatedAt }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -811,7 +860,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     /** Antigravity's chat state (shared store); Claude Code keeps its own, see [messages]. */
     private val _messages = store.messages
     /** Messages of the chat on screen, from the agent that owns it. */
-    val messages: StateFlow<List<ChatMessage>> = byAgent(_messages, claudeBackend.messages, openCodeBackend.messages, codexBackend.messages)
+    val messages: StateFlow<List<ChatMessage>> = byAgent(_messages, claudeBackend.messages, openCodeBackend.messages, codexBackend.messages, parallaxBackend.messages)
 
     // ==================== PROJECT CHECKPOINTS ====================
 
@@ -1513,7 +1562,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private val _conversationError = store.conversationError
-    val conversationError: StateFlow<String?> = byAgent(_conversationError, claudeBackend.conversationError, openCodeBackend.conversationError, codexBackend.conversationError)
+    val conversationError: StateFlow<String?> = byAgent(_conversationError, claudeBackend.conversationError, openCodeBackend.conversationError, codexBackend.conversationError, parallaxBackend.conversationError)
 
 
     private val _conversationDrafts = mutableMapOf<String, androidx.compose.ui.text.input.TextFieldValue>()
@@ -1556,6 +1605,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     AgentKind.CLAUDE -> claudeBackend.refreshInfo(force = true)
                     AgentKind.CODEX -> codexBackend.refreshSkills()
                     AgentKind.AGY -> ai.antigem.data.remote.SlashCommandsCache.refresh()
+                    AgentKind.PARALLAXAI -> ai.antigem.data.remote.SlashCommandsCache.refresh()
                     AgentKind.OPENCODE -> openCodeBackend.refreshSlashCommands()
                 }
             }

@@ -402,6 +402,7 @@ description: Use when a message comes from the AntiGem Jarvis voice mode (hands-
     private fun skillDir(agent: AgentKind) = when (agent) {
         AgentKind.CLAUDE -> "~/.claude/skills/$SKILL_NAME"
         AgentKind.AGY -> "~/.gemini/antigravity/skills/$SKILL_NAME"
+        AgentKind.PARALLAXAI -> "~/.gemini/antigravity/skills/$SKILL_NAME"
         AgentKind.OPENCODE -> "~/.config/opencode/skills/$SKILL_NAME"
         AgentKind.CODEX -> "~/.codex/skills/$SKILL_NAME"
     }

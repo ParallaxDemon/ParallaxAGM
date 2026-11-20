@@ -151,6 +151,7 @@ fun JarvisSettingsSectionPage(page: JarvisSettingsPage, cardBg: Color, cardBorde
     val agentTitle = when (agent) {
         AgentKind.CLAUDE -> "Claude Code"
         AgentKind.AGY -> "Antigravity"
+        AgentKind.PARALLAXAI -> "Antigravity"
         AgentKind.OPENCODE -> "OpenCode"
         AgentKind.CODEX -> "Codex"
         null -> "the agent"

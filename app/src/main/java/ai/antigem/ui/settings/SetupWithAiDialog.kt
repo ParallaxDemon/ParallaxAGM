@@ -61,6 +61,7 @@ private fun agentName(agent: AgentKind) = when (agent) {
     AgentKind.CLAUDE -> "Claude Code"
     AgentKind.CODEX -> "Codex"
     AgentKind.AGY -> "Antigravity (agy)"
+    AgentKind.PARALLAXAI -> "Antigravity (agy)"
     AgentKind.OPENCODE -> "OpenCode"
 }
 
@@ -68,6 +69,7 @@ private fun agentAccent(agent: AgentKind) = when (agent) {
     AgentKind.CLAUDE -> ClaudeAccent
     AgentKind.CODEX -> CodexAccent
     AgentKind.AGY -> AgyAccent
+    AgentKind.PARALLAXAI -> AgyAccent
     AgentKind.OPENCODE -> OpenCodeAccent
 }
 
@@ -98,6 +100,7 @@ fun repoSetupPrompt(source: String, agent: AgentKind, kind: RepoSetupKind): Stri
         AgentKind.CLAUDE -> "copy each skill folder (the folder holding SKILL.md, with all its files) to ~/.claude/skills/<skill-name>/"
         AgentKind.CODEX -> "copy each skill folder (the folder holding SKILL.md, with all its files) to ~/.codex/skills/<skill-name>/"
         AgentKind.AGY -> "copy each skill folder (the folder holding SKILL.md, with all its files) to ~/.gemini/antigravity/skills/<skill-name>/"
+        AgentKind.PARALLAXAI -> "copy each skill folder (the folder holding SKILL.md, with all its files) to ~/.gemini/antigravity/skills/<skill-name>/"
         AgentKind.OPENCODE -> "copy each skill folder (the folder holding SKILL.md, with all its files) to ~/.config/opencode/skills/<skill-name>/"
     }
     val plugins = when (agent) {
@@ -112,6 +115,7 @@ fun repoSetupPrompt(source: String, agent: AgentKind, kind: RepoSetupKind): Stri
             "Check with `codex plugin list`."
         )
         AgentKind.AGY -> listOf(
+        AgentKind.PARALLAXAI -> listOf(
             "A plugin (plugin.json at the top, or a Claude Code plugin or marketplace): `agy plugin install https://github.com/<owner>/<repo>` (the full https link; owner/repo alone does not work), or clone it and run `agy plugin install <folder>`.",
             "Check with `agy plugin list`."
         )
@@ -124,6 +128,7 @@ fun repoSetupPrompt(source: String, agent: AgentKind, kind: RepoSetupKind): Stri
         AgentKind.CLAUDE -> "`claude mcp add --scope user <name> -- <command> [args]`, or `claude mcp add --scope user --transport http <name> <url>`; check with `claude mcp list`"
         AgentKind.CODEX -> "`codex mcp add <name> -- <command> [args]`, or `codex mcp add <name> --url <url>`; check with `codex mcp list`"
         AgentKind.AGY -> "`agy mcp add <name> <command> [args]` (flags go before the name), or `agy mcp add <name> <url>`; check with `agy mcp list`"
+        AgentKind.PARALLAXAI -> "`agy mcp add <name> <command> [args]` (flags go before the name), or `agy mcp add <name> <url>`; check with `agy mcp list`"
         AgentKind.OPENCODE -> "`opencode mcp add --global <name> -- <command> [args]`, or `opencode mcp add --global <name> --url <url>`; check with `opencode mcp list`"
     }
     return buildString {

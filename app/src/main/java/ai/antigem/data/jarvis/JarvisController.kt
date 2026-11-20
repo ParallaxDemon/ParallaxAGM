@@ -556,6 +556,7 @@ object JarvisController {
     private fun agentLabel() = when (JarvisPreferences.agentKind) {
         AgentKind.CLAUDE -> "Claude Code"
         AgentKind.AGY -> "Antigravity"
+        AgentKind.PARALLAXAI -> "Antigravity"
         AgentKind.OPENCODE -> "OpenCode"
         AgentKind.CODEX -> "Codex"
         null -> "the agent"
@@ -1079,6 +1080,7 @@ object JarvisController {
             if (it == "auto") when (JarvisPreferences.agentKind) {
                 AgentKind.CLAUDE -> "claude"
                 AgentKind.AGY -> "agy"
+                AgentKind.PARALLAXAI -> "agy"
                 // OpenCode has no speech-to-text of its own
                 else -> "android"
             } else it
@@ -1556,6 +1558,7 @@ object JarvisController {
             when (agent) {
                 AgentKind.CLAUDE -> sendClaude(prompt)
                 AgentKind.AGY -> sendAgy(prompt)
+                AgentKind.PARALLAXAI -> sendAgy(prompt)
                 AgentKind.OPENCODE -> sendOpenCode(prompt)
                 AgentKind.CODEX -> sendCodex(prompt)
             }
@@ -1750,6 +1753,7 @@ object JarvisController {
             Result.success(b.effortsOf(modelId ?: b.selectedModelId.value).ifEmpty { CODEX_EFFORT_LEVELS })
         }
         AgentKind.AGY -> Result.failure(IllegalArgumentException(
+        AgentKind.PARALLAXAI -> Result.failure(IllegalArgumentException(
             "AGY has no separate effort: each thinking level is its own model. Pick that model with model / jarvis_set_model (see jarvis_list_models)."))
         AgentKind.OPENCODE -> Result.failure(IllegalArgumentException(
             "OpenCode chats have no effort setting in the app. Pick the model with model / jarvis_set_model."))
@@ -1790,6 +1794,7 @@ object JarvisController {
                 b.selectEffort(chosen)
             }
             AgentKind.AGY, AgentKind.OPENCODE -> return effortLevelsFor(kind, null).exceptionOrNull()?.message
+            AgentKind.PARALLAXAI -> return effortLevelsFor(kind, null).exceptionOrNull()?.message
         }
         return null
     }
@@ -1798,6 +1803,7 @@ object JarvisController {
     suspend fun setChatModel(id: String, kind: AgentKind, modelId: String) {
         when (kind) {
             AgentKind.AGY -> vm.agyBackend.rememberChatModel(id, modelId)
+            AgentKind.PARALLAXAI -> vm.agyBackend.rememberChatModel(id, modelId)
             AgentKind.CLAUDE -> {
                 val task = JarvisTasks.backendOf(id)
                 when {
@@ -1842,6 +1848,7 @@ object JarvisController {
                 "Stopped."
             }
             AgentKind.AGY -> hub.cancelCascadeInvocation(id).fold({ "Stopped." }, { "Could not stop: ${it.message}" })
+            AgentKind.PARALLAXAI -> hub.cancelCascadeInvocation(id).fold({ "Stopped." }, { "Could not stop: ${it.message}" })
             AgentKind.OPENCODE -> vm.openCodeBackend.interrupt(id).fold({ "Stopped." }, { "Could not stop: ${it.message}" })
             AgentKind.CODEX -> vm.codexBackend.interrupt(id).fold({ "Stopped." }, { "Could not stop: ${it.message}" })
         }
@@ -1861,6 +1868,10 @@ object JarvisController {
                 AgentKind.OPENCODE -> vm.openCodeBackend.loadMessages(id)
                 AgentKind.CODEX -> vm.codexBackend.loadMessages(id)
                 AgentKind.AGY -> {
+                    val steps = hub.getCascadeTrajectorySteps(id).getOrNull().orEmpty()
+                    ai.antigem.domain.chat.TrajectoryEngine().ingestStepsDirect(steps, id)
+                }
+                AgentKind.PARALLAXAI -> {
                     val steps = hub.getCascadeTrajectorySteps(id).getOrNull().orEmpty()
                     ai.antigem.domain.chat.TrajectoryEngine().ingestStepsDirect(steps, id)
                 }

@@ -127,6 +127,10 @@ object MemorySync {
                     val steps = hub.getCascadeTrajectorySteps(c.id).getOrNull().orEmpty()
                     ai.antigem.domain.chat.TrajectoryEngine().ingestStepsDirect(steps, c.id)
                 }
+                AgentKind.PARALLAXAI -> {
+                    val steps = hub.getCascadeTrajectorySteps(c.id).getOrNull().orEmpty()
+                    ai.antigem.domain.chat.TrajectoryEngine().ingestStepsDirect(steps, c.id)
+                }
             }
         }.getOrDefault(emptyList())
     }

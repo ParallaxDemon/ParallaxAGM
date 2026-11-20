@@ -609,7 +609,8 @@ fun ChatScreen(
             onRetry = { codexBackend.retryConnections() }
         )
     } else null
-    val agentEntries = listOfNotNull(agyEntry, claudeEntry, openCodeEntry, codexEntry)
+    val parallaxEntry = if (ai.antigem.domain.model.AgentKind.PARALLAXAI in enabledAgents) ai.antigem.ui.agents.parallaxStatusEntry() else null
+    val agentEntries = listOfNotNull(agyEntry, claudeEntry, openCodeEntry, codexEntry, parallaxEntry)
 
     // Codex's "/" commands that open a screen of the app instead of going to Codex
     val handleCodexCommand: (ai.antigem.data.agent.codex.CodexChatBackend.AppCommand) -> Unit = { cmd ->

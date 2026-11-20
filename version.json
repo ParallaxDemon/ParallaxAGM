@@ -3,6 +3,7 @@
   "version_name": "2.0.2",
   "min_supported_version_code": 2,
   "changelog": [
+    "Official signed build: a fixed release certificate is used in CI, so the unofficial-build warning no longer appears",
     "Added ParallaxAI as a selectable agent: continuous chats run through your ParallaxAI server API on GitHub Actions with the panel's tools",
     "ParallaxAI: `parallax` command added to the Linux terminal — chat, batch chats, status, artifacts and agent skill, using the ParallaxAI API key",
     "New app package ai.antigem: AntiGem now runs its own Linux environment, the separate com.termux build is no longer needed",

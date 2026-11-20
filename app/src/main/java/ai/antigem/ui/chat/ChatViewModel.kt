@@ -630,6 +630,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         isClaudeActive -> claudeBackend.regenerate(messageId)
         isOpenCodeActive -> openCodeBackend.regenerate(messageId)
         isCodexActive -> codexBackend.regenerate(messageId)
+        isParallaxActive -> parallaxBackend.retryMessage(messageId)
         else -> agyBackend.retryMessage(messageId)
     }
     fun prepareEditMessage(messageId: String): String? {
@@ -645,6 +646,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             claudeNotSupported("Editing a sent message")
             return null
         }
+        if (isParallaxActive) return null
         return agyBackend.prepareEditMessage(messageId)?.let { restoreAttachedFiles(it); editableText(it) }
     }
     fun revertAndEditLastUserMessage(targetMsg: ChatMessage, onRestored: (String) -> Unit) {
@@ -653,6 +655,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         if (isCodexActive) codexBackend.editMessage(targetMsg.id, restored)
         else if (isOpenCodeActive) openCodeBackend.editMessage(targetMsg.id, restoreFiles = false, restored)
         else if (isClaudeActive) claudeBackend.editMessage(targetMsg.id, restoreCode = false, restored)
+        else if (isParallaxActive) Unit
         else agyBackend.revertAndEditLastUserMessage(targetMsg, restored)
     }
 
@@ -672,6 +675,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Sidebar export / share of a Codex chat that is not open. */
     suspend fun loadCodexMessages(conversationId: String): List<ChatMessage> = codexBackend.loadMessages(conversationId)
+
+    /** Sidebar export / share of a ParallaxAI chat that is not open. */
+    fun loadParallaxMessages(conversationId: String): List<ChatMessage> = parallaxBackend.messagesOf(conversationId)
 
     fun renameConversation(id: String, title: String) {
         when (agentOf(id)) {
@@ -708,8 +714,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Messages sent while the agent was working, waiting to be delivered (queued-messages card). */
     val queuedMessages = byAgent(agyBackend.queuedMessages, claudeBackend.queuedMessages, noQueued, codexBackend.queuedMessages, noQueued)
-    fun sendQueuedNow(id: String) { if (isCodexActive) codexBackend.sendQueuedNow(id) else if (isClaudeActive) claudeBackend.sendQueuedNow(id) else if (!isOpenCodeActive) agyBackend.sendQueuedNow(id) }
-    fun deleteQueued(id: String) { if (isCodexActive) codexBackend.deleteQueued(id) else if (!isClaudeActive && !isOpenCodeActive) agyBackend.deleteQueued(id) }
+    fun sendQueuedNow(id: String) { if (isCodexActive) codexBackend.sendQueuedNow(id) else if (isClaudeActive) claudeBackend.sendQueuedNow(id) else if (!isOpenCodeActive && !isParallaxActive) agyBackend.sendQueuedNow(id) }
+    fun deleteQueued(id: String) { if (isCodexActive) codexBackend.deleteQueued(id) else if (!isClaudeActive && !isOpenCodeActive && !isParallaxActive) agyBackend.deleteQueued(id) }
     fun applyQuotaSummary(summary: ai.antigem.domain.model.QuotaSummaryResponse) = agyBackend.applyQuotaSummary(summary)
     fun refreshQuotas(force: Boolean = true, showToastFeedback: Boolean = false) {
         if (isCodexActive) {
@@ -720,25 +726,25 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         } else if (isClaudeActive) {
             claudeBackend.refreshInfo(force)
             agyBackend.refreshQuotas(force, showToastFeedback = false)
-        } else {
+        } else if (!isParallaxActive) {
             agyBackend.refreshQuotas(force, showToastFeedback)
         }
     }
-    fun approveAndExecuteTerminalTool(toolCall: ai.antigem.domain.model.ToolCall, messageId: String, scope: String? = null) = if (isCodexActive) codexBackend.approveTool(toolCall) else if (isOpenCodeActive) openCodeBackend.approveTool(toolCall) else if (isClaudeActive) claudeBackend.approveTool(toolCall) else agyBackend.approveAndExecuteTerminalTool(toolCall, messageId, scope)
-    fun rejectTerminalTool(toolCall: ai.antigem.domain.model.ToolCall, messageId: String, reason: String? = null) = if (isCodexActive) codexBackend.rejectTool(toolCall, reason) else if (isOpenCodeActive) openCodeBackend.rejectTool(toolCall, reason) else if (isClaudeActive) claudeBackend.rejectTool(toolCall, reason) else agyBackend.rejectTerminalTool(toolCall, messageId, reason)
-    fun approveAllPendingTools(list: List<PendingToolApproval>) = if (isCodexActive) list.forEach { codexBackend.approveTool(it.toolCall) } else if (isOpenCodeActive) list.forEach { openCodeBackend.approveTool(it.toolCall) } else if (isClaudeActive) list.forEach { claudeBackend.approveTool(it.toolCall) } else agyBackend.approveAllPendingTools(list)
-    fun rejectAllPendingTools(list: List<PendingToolApproval>, reason: String? = null) = if (isCodexActive) list.forEach { codexBackend.rejectTool(it.toolCall, reason) } else if (isOpenCodeActive) list.forEach { openCodeBackend.rejectTool(it.toolCall, reason) } else if (isClaudeActive) list.forEach { claudeBackend.rejectTool(it.toolCall, reason) } else agyBackend.rejectAllPendingTools(list, reason)
-    fun terminateRunningTerminalTool(toolCall: ai.antigem.domain.model.ToolCall, messageId: String) = if (isCodexActive) codexBackend.stopStreaming() else if (isOpenCodeActive) openCodeBackend.stopStreaming() else if (isClaudeActive) claudeBackend.stopStreaming() else agyBackend.terminateRunningTerminalTool(toolCall, messageId)
+    fun approveAndExecuteTerminalTool(toolCall: ai.antigem.domain.model.ToolCall, messageId: String, scope: String? = null) = if (isCodexActive) codexBackend.approveTool(toolCall) else if (isOpenCodeActive) openCodeBackend.approveTool(toolCall) else if (isClaudeActive) claudeBackend.approveTool(toolCall) else if (isParallaxActive) Unit else agyBackend.approveAndExecuteTerminalTool(toolCall, messageId, scope)
+    fun rejectTerminalTool(toolCall: ai.antigem.domain.model.ToolCall, messageId: String, reason: String? = null) = if (isCodexActive) codexBackend.rejectTool(toolCall, reason) else if (isOpenCodeActive) openCodeBackend.rejectTool(toolCall, reason) else if (isClaudeActive) claudeBackend.rejectTool(toolCall, reason) else if (isParallaxActive) Unit else agyBackend.rejectTerminalTool(toolCall, messageId, reason)
+    fun approveAllPendingTools(list: List<PendingToolApproval>) = if (isCodexActive) list.forEach { codexBackend.approveTool(it.toolCall) } else if (isOpenCodeActive) list.forEach { openCodeBackend.approveTool(it.toolCall) } else if (isClaudeActive) list.forEach { claudeBackend.approveTool(it.toolCall) } else if (isParallaxActive) Unit else agyBackend.approveAllPendingTools(list)
+    fun rejectAllPendingTools(list: List<PendingToolApproval>, reason: String? = null) = if (isCodexActive) list.forEach { codexBackend.rejectTool(it.toolCall, reason) } else if (isOpenCodeActive) list.forEach { openCodeBackend.rejectTool(it.toolCall, reason) } else if (isClaudeActive) list.forEach { claudeBackend.rejectTool(it.toolCall, reason) } else if (isParallaxActive) Unit else agyBackend.rejectAllPendingTools(list, reason)
+    fun terminateRunningTerminalTool(toolCall: ai.antigem.domain.model.ToolCall, messageId: String) = if (isCodexActive) codexBackend.stopStreaming() else if (isOpenCodeActive) openCodeBackend.stopStreaming() else if (isClaudeActive) claudeBackend.stopStreaming() else if (isParallaxActive) parallaxBackend.stopStreaming() else agyBackend.terminateRunningTerminalTool(toolCall, messageId)
     fun proceedAfterTermination(toolCall: ai.antigem.domain.model.ToolCall, messageId: String, userInstructions: String?) {
-        if (isClaudeActive || isOpenCodeActive || isCodexActive) {
+        if (isClaudeActive || isOpenCodeActive || isCodexActive || isParallaxActive) {
             store.terminatedToolDialog.value = null
             return
         }
         agyBackend.proceedAfterTermination(toolCall, messageId, userInstructions)
     }
-    fun submitUserChoices(toolCall: ai.antigem.domain.model.ToolCall, messageId: String, responses: List<ai.antigem.data.remote.dto.AskQuestionResponseItemDto>, summaryDisplay: String) = if (isCodexActive) codexBackend.submitChoices(toolCall, responses) else if (isOpenCodeActive) openCodeBackend.submitChoices(toolCall, responses) else if (isClaudeActive) claudeBackend.submitChoices(toolCall, responses, summaryDisplay) else agyBackend.submitUserChoices(toolCall, messageId, responses, summaryDisplay)
-    fun skipUserChoices(toolCall: ai.antigem.domain.model.ToolCall, messageId: String, responses: List<ai.antigem.data.remote.dto.AskQuestionResponseItemDto> = emptyList()) = if (isCodexActive) codexBackend.cancelChoices(toolCall) else if (isOpenCodeActive) openCodeBackend.cancelChoices(toolCall) else if (isClaudeActive) claudeBackend.skipChoices(toolCall) else agyBackend.skipUserChoices(toolCall, messageId, responses)
-    fun cancelUserChoices(toolCall: ai.antigem.domain.model.ToolCall, messageId: String) = if (isCodexActive) codexBackend.cancelChoices(toolCall) else if (isOpenCodeActive) openCodeBackend.cancelChoices(toolCall) else if (isClaudeActive) claudeBackend.cancelChoices(toolCall) else agyBackend.cancelUserChoices(toolCall, messageId)
+    fun submitUserChoices(toolCall: ai.antigem.domain.model.ToolCall, messageId: String, responses: List<ai.antigem.data.remote.dto.AskQuestionResponseItemDto>, summaryDisplay: String) = if (isCodexActive) codexBackend.submitChoices(toolCall, responses) else if (isOpenCodeActive) openCodeBackend.submitChoices(toolCall, responses) else if (isClaudeActive) claudeBackend.submitChoices(toolCall, responses, summaryDisplay) else if (isParallaxActive) Unit else agyBackend.submitUserChoices(toolCall, messageId, responses, summaryDisplay)
+    fun skipUserChoices(toolCall: ai.antigem.domain.model.ToolCall, messageId: String, responses: List<ai.antigem.data.remote.dto.AskQuestionResponseItemDto> = emptyList()) = if (isCodexActive) codexBackend.cancelChoices(toolCall) else if (isOpenCodeActive) openCodeBackend.cancelChoices(toolCall) else if (isClaudeActive) claudeBackend.skipChoices(toolCall) else if (isParallaxActive) Unit else agyBackend.skipUserChoices(toolCall, messageId, responses)
+    fun cancelUserChoices(toolCall: ai.antigem.domain.model.ToolCall, messageId: String) = if (isCodexActive) codexBackend.cancelChoices(toolCall) else if (isOpenCodeActive) openCodeBackend.cancelChoices(toolCall) else if (isClaudeActive) claudeBackend.cancelChoices(toolCall) else if (isParallaxActive) Unit else agyBackend.cancelUserChoices(toolCall, messageId)
 
     val mcpServers = mcpManager.mcpServers
     val isMcpLoading = mcpManager.isMcpLoading

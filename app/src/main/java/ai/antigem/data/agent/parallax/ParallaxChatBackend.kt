@@ -219,6 +219,19 @@ class ParallaxChatBackend(
         }
     }
 
+    /** Regenerates the reply after [messageId] by re-sending that turn's user prompt. */
+    fun retryMessage(messageId: String) {
+        val list = _messages.value
+        val index = list.indexOfFirst { it.id == messageId }
+        if (index < 0) return
+        val prompt = list.subList(0, index).lastOrNull { it.role == MessageRole.USER }?.content ?: return
+        val conversationId = store.currentConversation.value?.id ?: return
+        val kept = list.take(index).filterNot { it.isStreaming }
+        _messages.value = kept
+        persistMessages(conversationId, kept)
+        sendMessage(prompt)
+    }
+
     /** Sends the new prompt together with the recent turns so the model keeps the thread. */
     private fun buildPrompt(text: String, history: List<ChatMessage>, limit: Int): String {
         val recent = if (limit <= 0) emptyList() else history.takeLast(limit)

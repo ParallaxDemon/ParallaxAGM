@@ -26,9 +26,8 @@ jobs:
           fetch-depth: 0
           submodules: false
 
-      # termux-am provides am.apk; the other embedded repos are not needed for the build.
-      - name: Fetch termux-am submodule
-        run: git submodule update --init --depth 1 termux-am
+      # termux-am and the other upstream repos are vendored in this repository (downloaded from
+      # Santoshkurmi/antigem standalone), so no submodule checkout is needed.
 
       - name: Set up Java 21
         uses: actions/setup-java@v4

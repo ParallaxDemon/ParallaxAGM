@@ -2,6 +2,10 @@ name: Build ParallaxAGM APK
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'app/**'
+      - '.github/workflows/build-apk.yml'
   push:
     branches:
       - main
@@ -15,7 +19,30 @@ permissions:
   contents: write
 
 jobs:
+  test-chat-list:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install Android SDK 37
+        run: |
+          if command -v sdkmanager >/dev/null 2>&1; then
+            yes | sdkmanager --licenses >/dev/null 2>&1 || true
+            sdkmanager "platforms;android-37" "build-tools;37.0.0" || true
+          fi
+      - name: Verify duplicate chat ID regression
+        run: ./gradlew :app:testDebugUnitTest --tests ai.antigem.ui.drawer.ChatHistoryDrawerTest
+
   build-apk:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     env:
       VERSION_NAME: v2.0.2

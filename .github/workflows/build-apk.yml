@@ -50,15 +50,17 @@ jobs:
             sdkmanager "platforms;android-37" "build-tools;37.0.0" || true
           fi
 
-      # The signing config in app/build.gradle.kts uses fixed credentials (the upstream project ships them in the
-      # file), so a fresh keystore can be generated in CI without any repository secrets.
-      - name: Generate release keystore
+      # A fixed signing keystore is restored from the repository secret so every release has the same
+      # certificate. AntiGemApplication.isOfficialRelease() checks its SHA-256 to mark this an official build.
+      - name: Restore release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
         run: |
-          keytool -genkeypair -v \
-            -keystore app/release.jks -storetype JKS \
-            -storepass 123456 -keypass 123456 \
-            -alias antigem -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=ParallaxAGM, OU=ParallaxAI, O=ParallaxDemon, L=NA, ST=NA, C=IN" >/dev/null
+          if [ -z "$RELEASE_KEYSTORE_BASE64" ]; then
+            echo "RELEASE_KEYSTORE_BASE64 secret is missing"; exit 1
+          fi
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 -d > app/release.jks
+          keytool -list -v -keystore app/release.jks -storepass 123456 -alias antigem 2>/dev/null | grep SHA256:
           ls -l app/release.jks
 
       - name: Build signed release APK

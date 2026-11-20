@@ -129,7 +129,8 @@ class AntiGemApplication : Application(), coil.ImageLoaderFactory {
     }.getOrDefault(false)
 
     private companion object {
-        // SHA-256 of the release.jks certificate (alias "antigem"). Public, safe to commit.
-        const val RELEASE_CERT_SHA256 = "CCF2C681063BA941641519E4EAC7F024E92880CCD06EED5070DAA9717380F315"
+        // SHA-256 of the ParallaxAGM release.jks certificate (alias "antigem"), restored from the
+        // RELEASE_KEYSTORE_BASE64 repository secret in CI. Public, safe to commit.
+        const val RELEASE_CERT_SHA256 = "EEA6A27E3E118EC49BA5CAE4494D8FD858156DCF035F9E7EDBCEEC5EED09A1"
     }
 }

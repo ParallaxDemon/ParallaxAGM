@@ -78,7 +78,7 @@ private val AGENT_OPTIONS = listOf(
     AgentOption(
         AgentKind.PARALLAXAI,
         "ParallaxAI",
-        "DeepSeek chats through your ParallaxAI server API. Continuous chats run on GitHub Actions with analysis and patching tools."
+        "Your all-in-one agent with full phone access. Runs commands, creates and reads files, changes settings and does the work right on your device."
     )
 )
 

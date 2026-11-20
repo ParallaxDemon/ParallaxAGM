@@ -57,8 +57,8 @@ fun ParallaxSettingsScreen(cardBg: androidx.compose.ui.graphics.Color, cardBorde
     ) {
         Text("ParallaxAI", style = MaterialTheme.typography.titleLarge, color = ParallaxAccent)
         Text(
-            "Continuous chats run through the ParallaxAI panel API on GitHub Actions. " +
-                "Recent turns are sent as context with every message so the conversation continues.",
+            "ParallaxAI is your all-in-one agent with full phone access: it runs commands, creates and reads files " +
+                "and gets things done right on your device. Recent turns are sent as context so the conversation continues.",
             style = MaterialTheme.typography.bodyMedium
         )
 

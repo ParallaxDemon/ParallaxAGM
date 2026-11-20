@@ -45,7 +45,7 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     env:
-      VERSION_NAME: v2.0.3
+      VERSION_NAME: v2.0.4
     steps:
       - name: Checkout source
         uses: actions/checkout@v4

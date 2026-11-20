@@ -526,14 +526,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun sendNow(content: String) {
         val allRefs = ai.antigem.data.files.AttachedFiles.refsOf(_attachments.value)
-        // ParallaxAI runs on a text-only model: an image path in the hidden note makes it try to "read" the image.
-        // Keep the note for agents that really have file tools, and tell the user why images were skipped here.
+        // ParallaxAI's model cannot SEE images (it has no vision), though it has full file/command access.
+        // An image path in the hidden note would make it try to "read" the bytes as text, so skip images here.
         val refs = if (isParallaxActive) allRefs.filterNot {
             it.mimeType.startsWith("image/") || ai.antigem.data.files.AttachedFiles.isImagePath(it.path)
         } else allRefs
         if (isParallaxActive && refs.size != allRefs.size) {
             ai.antigem.ui.components.AppToastHelper.showToast(
-                "ParallaxAI is text-only — image attachments were ignored.",
+                "ParallaxAI can't see images — describe it in text and it'll do the rest.",
                 ai.antigem.ui.components.ChatToastType.INFO
             )
         }

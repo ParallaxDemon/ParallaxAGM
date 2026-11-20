@@ -194,7 +194,7 @@ fun openCodeStatusEntry(
 /** ParallaxAI is a server-backed agent: ready when a panel URL and key are configured (they default to the public panel). */
 fun parallaxStatusEntry(): AgentStatusEntry = AgentStatusEntry(
     AgentKind.PARALLAXAI, "ParallaxAI", ai.antigem.ui.components.ParallaxAccent,
-    "DeepSeek chats through your ParallaxAI server API", isReady = true
+    "Full phone access: runs commands and edits files on your device", isReady = true
 )
 
 fun codexStatusEntry(

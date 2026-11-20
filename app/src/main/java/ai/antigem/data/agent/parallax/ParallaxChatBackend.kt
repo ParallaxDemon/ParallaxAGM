@@ -234,8 +234,8 @@ class ParallaxChatBackend(
 
     /** Sends the new prompt together with the recent turns so the model keeps the thread. */
     private fun buildPrompt(text: String, history: List<ChatMessage>, limit: Int): String {
-        // The panel's model is text-only. Never pass the app's hidden attached-files note to it: it asks the agent to
-        // open those paths, and a text-only model answers with a "cannot read this image" error instead of the task.
+        // The worker strips hidden attached-files notes before inference (they are app metadata, not the user's
+        // request). Image attachments are already filtered out in ChatViewModel since the model has no vision.
         fun clean(s: String) = ai.antigem.data.files.AttachedFiles.stripAttachedNotes(s)
         val current = clean(text)
         val recent = if (limit <= 0) emptyList() else history.takeLast(limit)

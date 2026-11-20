@@ -23,6 +23,25 @@ object AttachedFiles {
     class Ref(val path: String, val mimeType: String, val size: Long, val originalOfImage: Boolean = false)
 
     private val BLOCK = Regex("""\s*<attached-files>\n([\s\S]*?)\n?</attached-files>\s*""")
+    private val HIDDEN_BLOCK = Regex("""<antigem-expansion command="">[\s\S]*?</antigem-expansion>\s*""")
+
+    /**
+     * [text] without the hidden note [block] adds. Used by text-only backends (ParallaxAI): the note tells an agent
+     * with file tools to open the paths, which a text-only model cannot do. Other hidden notes (memory, global context,
+     * plugin skills) are kept.
+     */
+    fun stripAttachedNotes(text: String): String {
+        if (!text.contains("<attached-files>")) return text
+        return HIDDEN_BLOCK.replace(text) { m -> if (m.value.contains("<attached-files>")) "" else m.value }
+            .let { BLOCK.replace(it, "") }
+            .trim()
+    }
+
+    /** Images cannot be read by text-only backends, even as a path in a hidden note. */
+    fun isImagePath(path: String): Boolean {
+        val ext = path.substringAfterLast('/').substringAfterLast('.', "").lowercase()
+        return ext in setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif")
+    }
 
     // `- `path` (mime, N bytes[, note])`; chats from before had `- /path (mime, N bytes)` (Claude only)
     private val LINE = Regex("""^- (?:`(.+)`|(/.+)) \(([^,()]+), (\d+) bytes(?:, ([^()]*))?\)$""")

@@ -234,12 +234,16 @@ class ParallaxChatBackend(
 
     /** Sends the new prompt together with the recent turns so the model keeps the thread. */
     private fun buildPrompt(text: String, history: List<ChatMessage>, limit: Int): String {
+        // The panel's model is text-only. Never pass the app's hidden attached-files note to it: it asks the agent to
+        // open those paths, and a text-only model answers with a "cannot read this image" error instead of the task.
+        fun clean(s: String) = ai.antigem.data.files.AttachedFiles.stripAttachedNotes(s)
+        val current = clean(text)
         val recent = if (limit <= 0) emptyList() else history.takeLast(limit)
-        if (recent.isEmpty()) return text
+        if (recent.isEmpty()) return current
         val context = recent.joinToString("\n") { m ->
-            (if (m.role == MessageRole.USER) "User" else "Assistant") + ": " + m.content.take(2000)
+            (if (m.role == MessageRole.USER) "User" else "Assistant") + ": " + clean(m.content).take(2000)
         }
-        return "Continuing the same conversation. Previous turns:\n$context\n\nUser: $text"
+        return "Continuing the same conversation. Previous turns:\n$context\n\nUser: $current"
     }
 
     private fun submitAndWait(prompt: String, conversationId: String): String {

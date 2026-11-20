@@ -1,8 +1,9 @@
 {
-  "version_code": 133,
-  "version_name": "2.0.2",
+  "version_code": 134,
+  "version_name": "2.0.3",
   "min_supported_version_code": 2,
   "changelog": [
+    "ParallaxAI is text-only: image attachments are ignored with a clear notice instead of sending an unreadable image path to the model",
     "Official signed build: a fixed release certificate is used in CI, so the unofficial-build warning no longer appears",
     "Added ParallaxAI as a selectable agent: continuous chats run through your ParallaxAI server API on GitHub Actions with the panel's tools",
     "ParallaxAI: `parallax` command added to the Linux terminal — chat, batch chats, status, artifacts and agent skill, using the ParallaxAI API key",

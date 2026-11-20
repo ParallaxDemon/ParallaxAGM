@@ -525,7 +525,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun sendNow(content: String) {
-        val refs = ai.antigem.data.files.AttachedFiles.refsOf(_attachments.value)
+        val allRefs = ai.antigem.data.files.AttachedFiles.refsOf(_attachments.value)
+        // ParallaxAI runs on a text-only model: an image path in the hidden note makes it try to "read" the image.
+        // Keep the note for agents that really have file tools, and tell the user why images were skipped here.
+        val refs = if (isParallaxActive) allRefs.filterNot {
+            it.mimeType.startsWith("image/") || ai.antigem.data.files.AttachedFiles.isImagePath(it.path)
+        } else allRefs
+        if (isParallaxActive && refs.size != allRefs.size) {
+            ai.antigem.ui.components.AppToastHelper.showToast(
+                "ParallaxAI is text-only — image attachments were ignored.",
+                ai.antigem.ui.components.ChatToastType.INFO
+            )
+        }
         val typed = PromptExpansion.expand(content)
         val expanded = if (refs.isEmpty()) typed
             else listOf(typed, ai.antigem.data.files.AttachedFiles.block(refs)).filter { it.isNotBlank() }.joinToString("\n\n")
@@ -533,7 +544,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val jarvis = ai.antigem.data.jarvis.JarvisController
         val chatId = currentConversation.value?.id
         val intercepted = (if (jarvis.isAttached) jarvis.interceptScreenMessage(chatId, expanded) else expanded) ?: return
-        rememberCopies(chatId, refs)
+        rememberCopies(chatId, allRefs)
         // a normal chat (a Jarvis chat carries its own guide instead): the app's global context goes in front
         val normal = intercepted === expanded
         val send: (String?) -> Unit = { memory ->

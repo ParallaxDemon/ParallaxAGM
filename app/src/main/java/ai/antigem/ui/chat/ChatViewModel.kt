@@ -169,7 +169,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val alwaysFalse = MutableStateFlow(false)
 
     private fun <T> byAgent(agy: StateFlow<T>, claude: StateFlow<T>, openCode: StateFlow<T>, codex: StateFlow<T>, parallax: StateFlow<T>, parallaxAiRe: StateFlow<T>): StateFlow<T> =
-        combine(combine(agy, claude, openCode, codex, parallax, parallaxAiRe) { vals -> vals.toList() }, store.currentConversation) { values, conv ->
+        combine(
+            combine(agy, claude, openCode) { a, c, o -> listOf(a, c, o) },
+            combine(codex, parallax, parallaxAiRe) { x, p, r -> listOf(x, p, r) },
+            store.currentConversation
+        ) { left, right, conv ->
+            val values = left + right
             when (conv?.agent) {
                 AgentKind.CLAUDE -> values[1]
                 AgentKind.OPENCODE -> values[2]
@@ -815,9 +820,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _conversations = store.conversations
     /** Every conversation of the enabled agents, Jarvis' own chats included. */
     val allConversations: StateFlow<List<Conversation>> = combine(
-        combine(_conversations, claudeBackend.conversations, openCodeBackend.conversations, codexBackend.conversations, parallaxBackend.conversations, parallaxAiReBackend.conversations) { agy, claude, openCode, codex, parallax, parallaxAiRe ->
-            listOf(agy, claude, openCode, codex, parallax, parallaxAiRe)
-        },
+        combine(
+            combine(_conversations, claudeBackend.conversations, openCodeBackend.conversations) { agy, claude, openCode -> listOf(agy, claude, openCode) },
+            combine(codexBackend.conversations, parallaxBackend.conversations, parallaxAiReBackend.conversations) { codex, parallax, parallaxAiRe -> listOf(codex, parallax, parallaxAiRe) }
+        ) { left, right -> left + right },
         enabledAgents
     ) { lists, enabled ->
         // a disabled agent's chats stay on disk but are not listed.
@@ -1624,6 +1630,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     AgentKind.AGY -> ai.antigem.data.remote.SlashCommandsCache.refresh()
                     AgentKind.PARALLAXAI -> ai.antigem.data.remote.SlashCommandsCache.refresh()
                     AgentKind.OPENCODE -> openCodeBackend.refreshSlashCommands()
+                    AgentKind.PARALLAX_AI_RE -> { /* direct llama-server backend, no slash command refresh */ }
                 }
             }
         }

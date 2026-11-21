@@ -494,6 +494,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 agyBackend.detach(); claudeBackend.detach(); openCodeBackend.detach(); codexBackend.detach(); parallaxAiReBackend.detach()
                 parallaxBackend.forkConversation(id)
             }
+            AgentKind.PARALLAX_AI_RE -> {
+                agyBackend.detach(); claudeBackend.detach(); openCodeBackend.detach(); codexBackend.detach(); parallaxBackend.detach()
+                parallaxAiReBackend.forkConversation(id)
+            }
             else -> agyBackend.forkConversation(id)
         }
     }
@@ -502,6 +506,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         isOpenCodeActive -> openCodeBackend.selectModel(modelId)
         isCodexActive -> codexBackend.selectModel(modelId)
         isParallaxActive -> Unit // the panel's model is fixed by its API key
+        isParallaxAiReActive -> parallaxAiReBackend.selectModel(modelId)
         else -> agyBackend.selectModel(modelId)
     }
     /**
@@ -573,6 +578,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         isOpenCodeActive -> openCodeBackend.sendMessage(prompt)
         isCodexActive -> codexBackend.sendMessage(prompt)
         isParallaxActive -> parallaxBackend.sendMessage(prompt)
+        isParallaxAiReActive -> parallaxAiReBackend.sendMessage(prompt)
         else -> agyBackend.sendMessage(prompt)
     }
 
@@ -639,6 +645,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         isOpenCodeActive -> openCodeBackend.regenerate(messageId)
         isCodexActive -> codexBackend.regenerate(messageId)
         isParallaxActive -> parallaxBackend.retryMessage(messageId)
+        isParallaxAiReActive -> parallaxAiReBackend.retryMessage(messageId)
         else -> agyBackend.retryMessage(messageId)
     }
     fun prepareEditMessage(messageId: String): String? {
@@ -722,13 +729,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         isOpenCodeActive -> openCodeBackend.stopStreaming()
         isCodexActive -> codexBackend.stopStreaming()
         isParallaxActive -> parallaxBackend.stopStreaming()
+        isParallaxAiReActive -> parallaxAiReBackend.stopStreaming()
         else -> agyBackend.stopStreaming()
     }
 
     /** Messages sent while the agent was working, waiting to be delivered (queued-messages card). */
     val queuedMessages = byAgent(agyBackend.queuedMessages, claudeBackend.queuedMessages, noQueued, codexBackend.queuedMessages, noQueued, noQueued)
-    fun sendQueuedNow(id: String) { if (isCodexActive) codexBackend.sendQueuedNow(id) else if (isClaudeActive) claudeBackend.sendQueuedNow(id) else if (!isOpenCodeActive && !isParallaxActive) agyBackend.sendQueuedNow(id) }
-    fun deleteQueued(id: String) { if (isCodexActive) codexBackend.deleteQueued(id) else if (!isClaudeActive && !isOpenCodeActive && !isParallaxActive) agyBackend.deleteQueued(id) }
+    fun sendQueuedNow(id: String) { if (isCodexActive) codexBackend.sendQueuedNow(id) else if (isClaudeActive) claudeBackend.sendQueuedNow(id) else if (!isOpenCodeActive && !isParallaxActive && !isParallaxAiReActive) agyBackend.sendQueuedNow(id) }
+    fun deleteQueued(id: String) { if (isCodexActive) codexBackend.deleteQueued(id) else if (!isClaudeActive && !isOpenCodeActive && !isParallaxActive && !isParallaxAiReActive) agyBackend.deleteQueued(id) }
     fun applyQuotaSummary(summary: ai.antigem.domain.model.QuotaSummaryResponse) = agyBackend.applyQuotaSummary(summary)
     fun refreshQuotas(force: Boolean = true, showToastFeedback: Boolean = false) {
         if (isCodexActive) {

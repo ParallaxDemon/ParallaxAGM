@@ -188,6 +188,35 @@ class ParallaxAiReChatBackend(
     fun messagesOf(id: String): List<ChatMessage> = loadMessagesInternal(id)
     suspend fun loadMessages(id: String): List<ChatMessage> = withContext(Dispatchers.IO) { loadMessagesInternal(id) }
 
+    fun selectModel(modelId: String) {
+        val m = modelId.trim().ifBlank { ParallaxAiRePreferences.DEFAULT_MODEL }
+        _selectedModelId.value = m
+        prefs.setConnection(prefs.baseUrl.value, prefs.apiKey.value, m)
+        store.currentConversation.value?.takeIf { it.agent == AgentKind.PARALLAX_AI_RE }?.let { conv ->
+            val updated = conv.copy(modelId = m)
+            store.currentConversation.value = updated
+            _conversations.value = _conversations.value.map { if (it.id == conv.id) updated else it }
+            persistChats()
+        }
+    }
+
+    fun retryMessage(messageId: String) {
+        val msgs = _messages.value
+        val idx = msgs.indexOfFirst { it.id == messageId }
+        if (idx < 0) return
+        val target = msgs[idx]
+        val userMsg = when (target.role) {
+            MessageRole.USER -> target
+            MessageRole.ASSISTANT -> msgs.subList(0, idx).lastOrNull { it.role == MessageRole.USER }
+            else -> null
+        } ?: return
+        // remove target assistant and everything after it, then resend
+        val cut = if (target.role == MessageRole.USER) idx else idx
+        _messages.value = msgs.subList(0, cut)
+        store.currentConversation.value?.let { persistMessages(it.id, _messages.value) }
+        sendMessage(userMsg.content)
+    }
+
     override fun retryConnections() {
         _lastError.value = null
         _conversationError.value = null

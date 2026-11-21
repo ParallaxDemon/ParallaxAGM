@@ -794,7 +794,7 @@ object JarvisMcp {
         return if (owner != caller) "That chat is a task of ${JarvisManagers.nameOf(owner)}: only that Jarvis chat directs it." else null
     }
 
-    private fun agentName(agent: AgentKind) = when (agent) { AgentKind.CLAUDE -> "Claude Code"; AgentKind.OPENCODE -> "OpenCode"; AgentKind.CODEX -> "Codex"; AgentKind.AGY -> "Antigravity"; AgentKind.PARALLAXAI -> "ParallaxAI" }
+    private fun agentName(agent: AgentKind) = when (agent) { AgentKind.CLAUDE -> "Claude Code"; AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> "OpenCode"; AgentKind.CODEX -> "Codex"; AgentKind.AGY -> "Antigravity"; AgentKind.PARALLAXAI -> "ParallaxAI"; AgentKind.PARALLAX_AI_RE -> "Parallax AI RE" }
 
     /** Hidden in front of every task's goal: how a sub-agent of Jarvis works and reports, and its team's role. */
     private fun subAgentBrief(team: JarvisManagers.Team?): String = buildString {
@@ -1318,7 +1318,7 @@ object JarvisMcp {
 
     private fun modelsFor(agent: AgentKind): List<AiModel> = when (agent) {
         AgentKind.CLAUDE -> vm.claudeBackend.availableModels.value
-        AgentKind.OPENCODE -> vm.openCodeBackend.availableModels.value
+        AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> vm.openCodeBackend.availableModels.value
         AgentKind.CODEX -> vm.codexBackend.availableModels.value
         AgentKind.AGY -> vm.agyBackend.enabledModels.value
         AgentKind.PARALLAXAI -> vm.agyBackend.enabledModels.value
@@ -1443,7 +1443,7 @@ object JarvisMcp {
             bool("group_chats_by_workspace", "Group the chat list by project", false, { vm.groupChatsByWorkspace.value }, { vm.setGroupChatsByWorkspace(it) }),
             bool("floating_bubble", "Floating chat bubble over other apps", false, { vm.isFloatingBubbleEnabled.value }, { vm.setFloatingBubbleEnabled(it) }),
             bool("vibrate_when_chat_done", "A light buzz when a chat finishes", false, { ChatCompletionMonitor.vibrate.value }, { ChatCompletionMonitor.setVibrate(it) }),
-            Setting("new_chat_agent", "Agent of new chats", "claude|agy|opencode|codex", false, get = { vm.newChatAgent.value.name.lowercase() }, set = { v ->
+            Setting("new_chat_agent", "Agent of new chats", "claude|agy|opencode|codex|parallaxai|parallax_ai_re", false, get = { vm.newChatAgent.value.name.lowercase() }, set = { v ->
                 val a = when (v.trim().lowercase()) { "claude" -> AgentKind.CLAUDE; "agy", "antigravity" -> AgentKind.AGY; "opencode" -> AgentKind.OPENCODE; "codex" -> AgentKind.CODEX; else -> null }
                 when {
                     a == null -> "Use claude, agy, opencode or codex."

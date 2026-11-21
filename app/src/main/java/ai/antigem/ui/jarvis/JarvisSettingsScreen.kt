@@ -152,7 +152,7 @@ fun JarvisSettingsSectionPage(page: JarvisSettingsPage, cardBg: Color, cardBorde
         AgentKind.CLAUDE -> "Claude Code"
         AgentKind.AGY -> "Antigravity"
         AgentKind.PARALLAXAI -> "Antigravity"
-        AgentKind.OPENCODE -> "OpenCode"
+        AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> "OpenCode"
         AgentKind.CODEX -> "Codex"
         null -> "the agent"
     }
@@ -181,7 +181,7 @@ fun JarvisSettingsSectionPage(page: JarvisSettingsPage, cardBg: Color, cardBorde
                     }
                     val models by (when (agent) {
                         AgentKind.CLAUDE -> vm.claudeBackend.availableModels
-                        AgentKind.OPENCODE -> vm.openCodeBackend.availableModels
+                        AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> vm.openCodeBackend.availableModels
                         AgentKind.CODEX -> vm.codexBackend.availableModels
                         else -> vm.agyBackend.enabledModels
                     }).collectAsState()
@@ -254,7 +254,7 @@ fun JarvisSettingsSectionPage(page: JarvisSettingsPage, cardBg: Color, cardBorde
                         LaunchedEffect(agent) {
                             when (agent) {
                                 AgentKind.CLAUDE -> vm.claudeConfig.loadMcp(null)
-                                AgentKind.OPENCODE -> reloadOpenCodeMcp()
+                                AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> reloadOpenCodeMcp()
                                 AgentKind.CODEX -> reloadCodexMcp()
                                 else -> vm.loadMcpServers()
                             }
@@ -266,7 +266,7 @@ fun JarvisSettingsSectionPage(page: JarvisSettingsPage, cardBg: Color, cardBorde
                         }
                         val mcpAdded = when (agent) {
                             AgentKind.CLAUDE -> claudeServers.any { it.name == name }
-                            AgentKind.OPENCODE -> name in openCodeServers
+                            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> name in openCodeServers
                             AgentKind.CODEX -> name in codexServers
                             else -> agyServers.any { it.name == name }
                         }

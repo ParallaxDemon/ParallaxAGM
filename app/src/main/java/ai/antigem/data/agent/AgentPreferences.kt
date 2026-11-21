@@ -37,7 +37,7 @@ class AgentPreferences(context: Context) {
 
         private fun key(agent: AgentKind) = "enabled_" + agent.name.lowercase()
 
-        private fun default(agent: AgentKind) = agent == AgentKind.AGY || agent == AgentKind.PARALLAXAI
+        private fun default(agent: AgentKind) = agent == AgentKind.AGY || agent == AgentKind.PARALLAXAI || agent == AgentKind.PARALLAX_AI_RE
 
         private fun read(prefs: android.content.SharedPreferences): Set<AgentKind> =
             AgentKind.entries.filter { prefs.getBoolean(key(it), default(it)) }.toSet().ifEmpty { setOf(AgentKind.AGY) }
@@ -56,7 +56,8 @@ class AgentPreferences(context: Context) {
             return buildString {
                 if (AgentKind.AGY !in enabled) append(" --no-hub")
                 if (AgentKind.CLAUDE !in enabled) append(" --no-claude")
-                if (AgentKind.OPENCODE !in enabled) append(" --no-opencode")
+                // Parallax AI RE uses OpenCode runtime; keep it running if either needs it.
+                if (AgentKind.OPENCODE !in enabled && AgentKind.PARALLAX_AI_RE !in enabled) append(" --no-opencode")
                 if (AgentKind.CODEX !in enabled) append(" --no-codex")
             }
         }

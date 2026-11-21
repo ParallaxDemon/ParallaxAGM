@@ -90,7 +90,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.Eagerly, AgentKind.AGY)
 
     private val isClaudeActive get() = store.currentConversation.value?.agent == AgentKind.CLAUDE
-    private val isOpenCodeActive get() = store.currentConversation.value?.agent == AgentKind.OPENCODE
+    private val isOpenCodeActive get() = store.currentConversation.value?.agent == AgentKind.OPENCODE || store.currentConversation.value?.agent == AgentKind.PARALLAX_AI_RE
     private val isCodexActive get() = store.currentConversation.value?.agent == AgentKind.CODEX
     private val isParallaxActive get() = store.currentConversation.value?.agent == AgentKind.PARALLAXAI
 
@@ -108,7 +108,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val isApplyingAgents: StateFlow<Boolean> = _isApplyingAgents.asStateFlow()
 
     private val isClaudeEnabled get() = AgentKind.CLAUDE in enabledAgents.value
-    private val isOpenCodeEnabled get() = AgentKind.OPENCODE in enabledAgents.value
+    private val isOpenCodeEnabled get() = AgentKind.OPENCODE in enabledAgents.value || AgentKind.PARALLAX_AI_RE in enabledAgents.value
     private val isCodexEnabled get() = AgentKind.CODEX in enabledAgents.value
     private val isParallaxEnabled get() = AgentKind.PARALLAXAI in enabledAgents.value
 
@@ -128,7 +128,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             claudeBackend.stop()
         }
-        if (AgentKind.OPENCODE in agents) openCodeBackend.start() else openCodeBackend.stop()
+        if (AgentKind.OPENCODE in agents || AgentKind.PARALLAX_AI_RE in agents) openCodeBackend.start() else openCodeBackend.stop()
         if (AgentKind.CODEX in agents) codexBackend.start() else codexBackend.stop()
         val cur = store.currentConversation.value
         if (cur == null || cur.agent !in agents) startNewChat()
@@ -165,7 +165,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         combine(combine(agy, claude, openCode, codex, parallax) { a, c, o, x, p -> listOf(a, c, o, x, p) }, store.currentConversation) { values, conv ->
             when (conv?.agent) {
                 AgentKind.CLAUDE -> values[1]
-                AgentKind.OPENCODE -> values[2]
+                AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> values[2]
                 AgentKind.CODEX -> values[3]
                 AgentKind.PARALLAXAI -> values[4]
                 else -> values[0]
@@ -383,38 +383,27 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         flushMemoryWait()
         when (agent) {
             AgentKind.CLAUDE -> {
-                agyBackend.detach()
-                openCodeBackend.detach()
-                codexBackend.detach()
-                parallaxBackend.detach()
+                agyBackend.detach(); openCodeBackend.detach(); codexBackend.detach(); parallaxBackend.detach()
                 claudeBackend.startNewChat()
             }
             AgentKind.OPENCODE -> {
-                agyBackend.detach()
-                claudeBackend.detach()
-                codexBackend.detach()
-                parallaxBackend.detach()
-                openCodeBackend.startNewChat()
+                agyBackend.detach(); claudeBackend.detach(); codexBackend.detach(); parallaxBackend.detach()
+                openCodeBackend.startNewChatAs(AgentKind.OPENCODE)
+            }
+            AgentKind.PARALLAX_AI_RE -> {
+                agyBackend.detach(); claudeBackend.detach(); codexBackend.detach(); parallaxBackend.detach()
+                openCodeBackend.startNewChatAs(AgentKind.PARALLAX_AI_RE)
             }
             AgentKind.CODEX -> {
-                agyBackend.detach()
-                claudeBackend.detach()
-                openCodeBackend.detach()
-                parallaxBackend.detach()
+                agyBackend.detach(); claudeBackend.detach(); openCodeBackend.detach(); parallaxBackend.detach()
                 codexBackend.startNewChat()
             }
             AgentKind.AGY -> {
-                claudeBackend.detach()
-                openCodeBackend.detach()
-                codexBackend.detach()
-                parallaxBackend.detach()
+                claudeBackend.detach(); openCodeBackend.detach(); codexBackend.detach(); parallaxBackend.detach()
                 agyBackend.startNewChat()
             }
             AgentKind.PARALLAXAI -> {
-                agyBackend.detach()
-                claudeBackend.detach()
-                openCodeBackend.detach()
-                codexBackend.detach()
+                agyBackend.detach(); claudeBackend.detach(); openCodeBackend.detach(); codexBackend.detach()
                 parallaxBackend.startNewChat()
             }
         }
@@ -423,38 +412,23 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         flushMemoryWait()
         when (agentOf(id)) {
             AgentKind.CLAUDE -> {
-                agyBackend.detach()
-                openCodeBackend.detach()
-                codexBackend.detach()
-                parallaxBackend.detach()
+                agyBackend.detach(); openCodeBackend.detach(); codexBackend.detach(); parallaxBackend.detach()
                 claudeBackend.selectConversation(id)
             }
-            AgentKind.OPENCODE -> {
-                agyBackend.detach()
-                claudeBackend.detach()
-                codexBackend.detach()
-                parallaxBackend.detach()
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> {
+                agyBackend.detach(); claudeBackend.detach(); codexBackend.detach(); parallaxBackend.detach()
                 openCodeBackend.selectConversation(id)
             }
             AgentKind.CODEX -> {
-                agyBackend.detach()
-                claudeBackend.detach()
-                openCodeBackend.detach()
-                parallaxBackend.detach()
+                agyBackend.detach(); claudeBackend.detach(); openCodeBackend.detach(); parallaxBackend.detach()
                 codexBackend.selectConversation(id)
             }
             AgentKind.AGY -> {
-                claudeBackend.detach()
-                openCodeBackend.detach()
-                codexBackend.detach()
-                parallaxBackend.detach()
+                claudeBackend.detach(); openCodeBackend.detach(); codexBackend.detach(); parallaxBackend.detach()
                 agyBackend.selectConversation(id)
             }
             AgentKind.PARALLAXAI -> {
-                agyBackend.detach()
-                claudeBackend.detach()
-                openCodeBackend.detach()
-                codexBackend.detach()
+                agyBackend.detach(); claudeBackend.detach(); openCodeBackend.detach(); codexBackend.detach()
                 parallaxBackend.selectConversation(id)
             }
         }
@@ -463,7 +437,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteConversation(id: String) {
         when (agentOf(id)) {
             AgentKind.CLAUDE -> claudeBackend.deleteConversation(id)
-            AgentKind.OPENCODE -> openCodeBackend.deleteConversation(id)
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> openCodeBackend.deleteConversation(id)
             AgentKind.CODEX -> codexBackend.deleteConversation(id)
             AgentKind.AGY -> agyBackend.deleteConversation(id)
             AgentKind.PARALLAXAI -> parallaxBackend.deleteConversation(id)
@@ -478,26 +452,25 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun forkConversation(id: String) {
         flushMemoryWait()
-        if (agentOf(id) == AgentKind.CODEX) {
-            agyBackend.detach()
-            claudeBackend.detach()
-            openCodeBackend.detach()
-            codexBackend.forkConversation(id)
-        } else if (agentOf(id) == AgentKind.OPENCODE) {
-            agyBackend.detach()
-            claudeBackend.detach()
-            openCodeBackend.forkConversation(id)
-        } else if (agentOf(id) == AgentKind.CLAUDE) {
-            agyBackend.detach()
-            claudeBackend.forkConversation(id)
-        } else if (agentOf(id) == AgentKind.PARALLAXAI) {
-            agyBackend.detach()
-            claudeBackend.detach()
-            openCodeBackend.detach()
-            codexBackend.detach()
-            parallaxBackend.forkConversation(id)
-        } else {
-            agyBackend.forkConversation(id)
+        val a = agentOf(id)
+        when (a) {
+            AgentKind.CODEX -> {
+                agyBackend.detach(); claudeBackend.detach(); openCodeBackend.detach(); parallaxBackend.detach()
+                codexBackend.forkConversation(id)
+            }
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> {
+                agyBackend.detach(); claudeBackend.detach(); codexBackend.detach(); parallaxBackend.detach()
+                openCodeBackend.forkConversation(id)
+            }
+            AgentKind.CLAUDE -> {
+                agyBackend.detach(); openCodeBackend.detach(); codexBackend.detach(); parallaxBackend.detach()
+                claudeBackend.forkConversation(id)
+            }
+            AgentKind.PARALLAXAI -> {
+                agyBackend.detach(); claudeBackend.detach(); openCodeBackend.detach(); codexBackend.detach()
+                parallaxBackend.forkConversation(id)
+            }
+            else -> agyBackend.forkConversation(id)
         }
     }
     fun selectModel(modelId: String) = when {
@@ -693,7 +666,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun renameConversation(id: String, title: String) {
         when (agentOf(id)) {
             AgentKind.CLAUDE -> claudeBackend.renameConversation(id, title)
-            AgentKind.OPENCODE -> openCodeBackend.renameConversation(id, title)
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> openCodeBackend.renameConversation(id, title)
             AgentKind.CODEX -> codexBackend.renameConversation(id, title)
             AgentKind.AGY -> agyBackend.renameConversation(id, title)
             AgentKind.PARALLAXAI -> parallaxBackend.renameConversation(id, title)
@@ -704,7 +677,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun setConversationArchived(id: String, archived: Boolean) {
         when (agentOf(id)) {
             AgentKind.CLAUDE -> claudeBackend.setArchived(id, archived)
-            AgentKind.OPENCODE -> openCodeBackend.setArchived(id, archived)
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> openCodeBackend.setArchived(id, archived)
             AgentKind.CODEX -> codexBackend.setArchived(id, archived)
             AgentKind.AGY -> agyBackend.setArchived(id, archived)
             AgentKind.PARALLAXAI -> parallaxBackend.setArchived(id, archived)
@@ -823,9 +796,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         },
         enabledAgents
     ) { lists, enabled ->
-        // a disabled agent's chats stay on disk but are not listed
+        // a disabled agent's chats stay on disk but are not listed. OpenCode backend serves both OpenCode and Parallax AI RE.
+        val openCodeConvs = lists[2].filter { c ->
+            when (c.agent) {
+                AgentKind.PARALLAX_AI_RE -> AgentKind.PARALLAX_AI_RE in enabled
+                else -> AgentKind.OPENCODE in enabled
+            }
+        }
         ((if (AgentKind.AGY in enabled) lists[0] else emptyList()) + (if (AgentKind.CLAUDE in enabled) lists[1] else emptyList()) +
-            (if (AgentKind.OPENCODE in enabled) lists[2] else emptyList()) + (if (AgentKind.CODEX in enabled) lists[3] else emptyList()) +
+            openCodeConvs + (if (AgentKind.CODEX in enabled) lists[3] else emptyList()) +
             (if (AgentKind.PARALLAXAI in enabled) lists[4] else emptyList()))
             .sortedByDescending { it.updatedAt }
             .distinctBy { it.id }
@@ -884,8 +863,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun backendOf(agent: AgentKind?): ai.antigem.data.agent.AgentChatBackend = when (agent) {
         AgentKind.CLAUDE -> claudeBackend
-        AgentKind.OPENCODE -> openCodeBackend
+        AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> openCodeBackend
         AgentKind.CODEX -> codexBackend
+        AgentKind.PARALLAXAI -> parallaxBackend
         else -> agyBackend
     }
 
@@ -1624,7 +1604,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     AgentKind.CODEX -> codexBackend.refreshSkills()
                     AgentKind.AGY -> ai.antigem.data.remote.SlashCommandsCache.refresh()
                     AgentKind.PARALLAXAI -> ai.antigem.data.remote.SlashCommandsCache.refresh()
-                    AgentKind.OPENCODE -> openCodeBackend.refreshSlashCommands()
+                    AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> openCodeBackend.refreshSlashCommands()
                 }
             }
         }

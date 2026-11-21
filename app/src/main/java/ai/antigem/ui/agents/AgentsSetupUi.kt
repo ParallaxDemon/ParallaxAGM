@@ -79,6 +79,11 @@ private val AGENT_OPTIONS = listOf(
         AgentKind.PARALLAXAI,
         "ParallaxAI",
         "Your all-in-one agent with full phone access. Runs commands, creates and reads files, changes settings and does the work right on your device."
+    ),
+    AgentOption(
+        AgentKind.PARALLAX_AI_RE,
+        "Parallax AI RE",
+        "Reverse-engineering focused agent with full phone/tool access, powered by OpenCode and your local Huihui-Qwen3.5-4B model on the LAN (llama-server)."
     )
 )
 

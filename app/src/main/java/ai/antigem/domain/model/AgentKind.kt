@@ -7,5 +7,7 @@ enum class AgentKind {
     OPENCODE,
     CODEX,
     /** ParallaxAI: DeepSeek chats through the ParallaxAI server API, with the conversation kept as context. */
-    PARALLAXAI
+    PARALLAXAI,
+    /** Parallax AI RE: full-access agent using a local model (OpenAI-compatible, e.g. llama-server) via OpenCode runtime with phone tools/MCPs. */
+    PARALLAX_AI_RE
 }

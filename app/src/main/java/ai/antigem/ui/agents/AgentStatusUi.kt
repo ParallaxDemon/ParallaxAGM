@@ -197,6 +197,25 @@ fun parallaxStatusEntry(): AgentStatusEntry = AgentStatusEntry(
     "Full phone access: runs commands and edits files on your device", isReady = true
 )
 
+/** Parallax AI RE: OpenCode runtime pointed at a local/remote OpenAI-compatible model with full tool access. */
+fun parallaxAiReStatusEntry(
+    state: ai.antigem.data.agent.opencode.OpenCodeState,
+    status: ai.antigem.data.agent.opencode.OpenCodeStatus?,
+    serverRestarting: Boolean,
+    onSetup: () -> Unit,
+    onRestartServer: () -> Unit,
+    onRetry: () -> Unit
+): AgentStatusEntry {
+    val base = openCodeStatusEntry(state, status, serverRestarting, onSetup, onRestartServer, onRetry)
+    return base.copy(
+        agent = AgentKind.PARALLAX_AI_RE,
+        detail = when (state) {
+            OpenCodeState.READY -> listOfNotNull(status?.version?.let { "OpenCode $it" }, "llama-server model @ 10.166.8.221:8080", "full phone/tools access").joinToString(" · ")
+            else -> base.detail
+        }
+    )
+}
+
 fun codexStatusEntry(
     state: ai.antigem.data.agent.codex.CodexState,
     status: ai.antigem.data.agent.codex.CodexStatus?,
@@ -298,6 +317,7 @@ fun AgentMark(agent: AgentKind, modifier: Modifier = Modifier, size: Dp = 32.dp,
             when (agent) {
                 AgentKind.AGY -> Icon(Icons.Outlined.RocketLaunch, null, tint = accent, modifier = Modifier.size(size * 0.52f))
                 AgentKind.PARALLAXAI -> Icon(Icons.Outlined.RocketLaunch, null, tint = accent, modifier = Modifier.size(size * 0.52f))
+                AgentKind.PARALLAX_AI_RE -> Text("RE", color = accent, fontWeight = FontWeight.Bold, fontSize = (size.value * 0.34f).sp, maxLines = 1)
                 AgentKind.CLAUDE -> Text("✻", color = accent, fontWeight = FontWeight.Bold, fontSize = (size.value * 0.5f).sp)
                 AgentKind.OPENCODE -> Text("</>", color = accent, fontWeight = FontWeight.Bold, fontSize = (size.value * 0.3f).sp, maxLines = 1)
                 AgentKind.CODEX -> Text(">_", color = accent, fontWeight = FontWeight.Bold, fontSize = (size.value * 0.36f).sp, maxLines = 1)
@@ -384,8 +404,10 @@ fun AgentStatusIndicator(
     val claude = entries.find { it.agent == AgentKind.CLAUDE }
     val openCode = entries.find { it.agent == AgentKind.OPENCODE }
     val codex = entries.find { it.agent == AgentKind.CODEX }
+    val parallax = entries.find { it.agent == AgentKind.PARALLAXAI }
+    val parallaxRe = entries.find { it.agent == AgentKind.PARALLAX_AI_RE }
     // one slice per enabled agent
-    val colors = listOfNotNull(agy, claude, openCode, codex).map { it.color }
+    val colors = listOfNotNull(agy, claude, openCode, codex, parallax, parallaxRe).map { it.color }
     Box(
         modifier = modifier.size(36.dp).clip(CircleShape).clickable { open = true },
         contentAlignment = Alignment.Center

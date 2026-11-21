@@ -403,7 +403,7 @@ description: Use when a message comes from the AntiGem Jarvis voice mode (hands-
         AgentKind.CLAUDE -> "~/.claude/skills/$SKILL_NAME"
         AgentKind.AGY -> "~/.gemini/antigravity/skills/$SKILL_NAME"
         AgentKind.PARALLAXAI -> "~/.gemini/antigravity/skills/$SKILL_NAME"
-        AgentKind.OPENCODE -> "~/.config/opencode/skills/$SKILL_NAME"
+        AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> "~/.config/opencode/skills/$SKILL_NAME"
         AgentKind.CODEX -> "~/.codex/skills/$SKILL_NAME"
     }
 

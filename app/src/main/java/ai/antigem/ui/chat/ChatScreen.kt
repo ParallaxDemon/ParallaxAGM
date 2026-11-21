@@ -196,10 +196,11 @@ fun ChatScreen(
     }
     val newChatAgent by viewModel.newChatAgent.collectAsState()
     val isClaudeChat = currentConv?.agent == ai.antigem.domain.model.AgentKind.CLAUDE
-    val isOpenCodeChat = currentConv?.agent == ai.antigem.domain.model.AgentKind.OPENCODE
+    val isOpenCodeChat = currentConv?.agent == ai.antigem.domain.model.AgentKind.OPENCODE || currentConv?.agent == ai.antigem.domain.model.AgentKind.PARALLAX_AI_RE
     val isCodexChat = currentConv?.agent == ai.antigem.domain.model.AgentKind.CODEX
+    val isParallaxChat = currentConv?.agent == ai.antigem.domain.model.AgentKind.PARALLAXAI
     /** The chat on screen is Antigravity's (its hub, bridge banners and sign-in apply). */
-    val isAgyChat = !isClaudeChat && !isOpenCodeChat && !isCodexChat
+    val isAgyChat = !isClaudeChat && !isOpenCodeChat && !isCodexChat && !isParallaxChat
     val openCodeBackend = viewModel.openCodeBackend
     val openCodePending by openCodeBackend.pendingPermissions.collectAsState()
     val openCodeState by openCodeBackend.state.collectAsState()
@@ -577,7 +578,20 @@ fun ChatScreen(
             state = openCodeState,
             status = openCodeStatus,
             serverRestarting = serverRestarting,
-            // installs right away; Settings → OpenCode shows the progress
+            onSetup = {
+                viewModel.openCodeBackend.startCliJob("install")
+                openCodeSettingsPage = ai.antigem.ui.opencode.OpenCodeSettingsPage.SERVER
+                showSettingsDialog = true
+            },
+            onRestartServer = restartLocalServer,
+            onRetry = { viewModel.openCodeBackend.retryConnections() }
+        )
+    } else null
+    val parallaxAiReEntry = if (ai.antigem.domain.model.AgentKind.PARALLAX_AI_RE in enabledAgents) {
+        ai.antigem.ui.agents.parallaxAiReStatusEntry(
+            state = openCodeState,
+            status = openCodeStatus,
+            serverRestarting = serverRestarting,
             onSetup = {
                 viewModel.openCodeBackend.startCliJob("install")
                 openCodeSettingsPage = ai.antigem.ui.opencode.OpenCodeSettingsPage.SERVER
@@ -610,7 +624,7 @@ fun ChatScreen(
         )
     } else null
     val parallaxEntry = if (ai.antigem.domain.model.AgentKind.PARALLAXAI in enabledAgents) ai.antigem.ui.agents.parallaxStatusEntry() else null
-    val agentEntries = listOfNotNull(agyEntry, claudeEntry, openCodeEntry, codexEntry, parallaxEntry)
+    val agentEntries = listOfNotNull(agyEntry, claudeEntry, openCodeEntry, codexEntry, parallaxEntry, parallaxAiReEntry)
 
     // Codex's "/" commands that open a screen of the app instead of going to Codex
     val handleCodexCommand: (ai.antigem.data.agent.codex.CodexChatBackend.AppCommand) -> Unit = { cmd ->
@@ -1442,6 +1456,7 @@ fun ChatScreen(
                         loadMessages = { id ->
                             if (viewModel.openCodeBackend.conversations.value.any { it.id == id }) viewModel.loadOpenCodeMessages(id)
                             else if (viewModel.codexBackend.conversations.value.any { it.id == id }) viewModel.loadCodexMessages(id)
+                            else if (viewModel.parallaxBackend.conversations.value.any { it.id == id }) viewModel.loadParallaxMessages(id)
                             else viewModel.loadClaudeMessages(id)
                         },
                         rename = { id, title -> viewModel.renameConversation(id, title) },

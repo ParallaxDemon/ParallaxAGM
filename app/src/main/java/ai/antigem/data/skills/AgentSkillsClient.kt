@@ -103,6 +103,7 @@ object AgentSkillsClient {
         AgentKind.AGY -> "agy"
         AgentKind.PARALLAXAI -> "agy"
         AgentKind.OPENCODE -> "opencode"
+            AgentKind.PARALLAX_AI_RE -> "opencode"
     }
 
     private fun url(path: String) = AuthPreferences.currentBridgeHttpUrl.trimEnd('/') + "/api/agent-skills" + path

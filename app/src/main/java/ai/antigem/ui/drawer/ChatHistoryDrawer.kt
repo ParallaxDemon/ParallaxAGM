@@ -839,7 +839,7 @@ fun ChatHistoryDrawer(
                                 ai.antigem.domain.model.AgentKind.AGY -> "Antigravity"
                                 ai.antigem.domain.model.AgentKind.PARALLAXAI -> "Antigravity"
                                 ai.antigem.domain.model.AgentKind.CLAUDE -> "Claude"
-                                ai.antigem.domain.model.AgentKind.OPENCODE -> "OpenCode"
+                                ai.antigem.domain.model.AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> "OpenCode"
                                 ai.antigem.domain.model.AgentKind.CODEX -> "Codex"
                             }
                             add(agent to label)

@@ -38,7 +38,7 @@ object JarvisDriver {
         return when (agent) {
             AgentKind.CLAUDE -> claude[id]?.isCurrentChatActivelyRunning?.value == true ||
                 vm.claudeBackend.conversations.value.any { it.id == id && it.isRunning }
-            AgentKind.OPENCODE -> openCode[id]?.isCurrentChatActivelyRunning?.value == true ||
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> openCode[id]?.isCurrentChatActivelyRunning?.value == true ||
                 vm.openCodeBackend.conversations.value.any { it.id == id && it.isRunning }
             AgentKind.CODEX -> codex[id]?.isCurrentChatActivelyRunning?.value == true ||
                 vm.codexBackend.conversations.value.any { it.id == id && it.isRunning }
@@ -58,7 +58,7 @@ object JarvisDriver {
         if (!JarvisController.isAttached || onScreen(id)) return
         when (agentOf(id)) {
             AgentKind.CLAUDE -> claude.getOrPut(id) { newClaude().also { it.selectConversation(id) } }
-            AgentKind.OPENCODE -> openCode.getOrPut(id) { newOpenCode().also { it.selectConversation(id) } }
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> openCode.getOrPut(id) { newOpenCode().also { it.selectConversation(id) } }
             AgentKind.CODEX -> codex.getOrPut(id) { newCodex().also { it.selectConversation(id) } }
             AgentKind.AGY -> Unit
             AgentKind.PARALLAXAI -> Unit
@@ -110,7 +110,7 @@ object JarvisDriver {
                 if (fresh) delay(900) else if (b.currentConversation.value?.id != id) { b.selectConversation(id); delay(900) }
                 b.sendMessage(text)
             }
-            AgentKind.OPENCODE -> if (screenFree) vm.openCodeBackend.sendMessage(text) else {
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> if (screenFree) vm.openCodeBackend.sendMessage(text) else {
                 val fresh = !openCode.containsKey(id)
                 val b = openCode.getOrPut(id) { newOpenCode().also { it.selectConversation(id) } }
                 if (fresh) delay(900) else if (b.currentConversation.value?.id != id) { b.selectConversation(id); delay(900) }
@@ -145,7 +145,7 @@ object JarvisDriver {
                     b.stopStreaming()
                 }
             }
-            AgentKind.OPENCODE -> (openCode[id] ?: vm.openCodeBackend).interrupt(id)
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> (openCode[id] ?: vm.openCodeBackend).interrupt(id)
             AgentKind.CODEX -> (codex[id] ?: vm.codexBackend).interrupt(id)
             AgentKind.AGY -> hub.cancelCascadeInvocation(id)
             AgentKind.PARALLAXAI -> hub.cancelCascadeInvocation(id)
@@ -155,7 +155,7 @@ object JarvisDriver {
     /** The chat's messages as they are live (Claude, OpenCode); null when only the server has them (Antigravity). */
     fun liveMessages(id: String): List<ChatMessage>? = when (agentOf(id)) {
         AgentKind.CLAUDE -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.CLAUDE) vm.claudeBackend.messages.value else claude[id]?.messages?.value
-        AgentKind.OPENCODE -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.OPENCODE) vm.openCodeBackend.messages.value else openCode[id]?.messages?.value
+        AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.OPENCODE) vm.openCodeBackend.messages.value else openCode[id]?.messages?.value
         AgentKind.CODEX -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.CODEX) vm.codexBackend.messages.value else codex[id]?.messages?.value
         AgentKind.AGY -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.AGY) vm.messages.value else null
         AgentKind.PARALLAXAI -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.AGY) vm.messages.value else null

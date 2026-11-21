@@ -40,12 +40,16 @@ val CodexAccent = Color(0xFF8B5CF6)
 /** ParallaxAI's color across the app. */
 val ParallaxAccent = Color(0xFFF59E0B)
 
+/** Parallax AI RE's color across the app. */
+val ParallaxAiReAccent = Color(0xFFEF4444)
+
 fun AgentKind.label(): String = when (this) {
     AgentKind.AGY -> "Antigravity"
     AgentKind.PARALLAXAI -> "ParallaxAI"
     AgentKind.CLAUDE -> "Claude Code"
     AgentKind.OPENCODE -> "OpenCode"
     AgentKind.CODEX -> "Codex"
+    AgentKind.PARALLAX_AI_RE -> "Parallax AI RE"
 }
 
 fun AgentKind.accent(): Color = when (this) {
@@ -54,6 +58,7 @@ fun AgentKind.accent(): Color = when (this) {
     AgentKind.CLAUDE -> ClaudeAccent
     AgentKind.OPENCODE -> OpenCodeAccent
     AgentKind.CODEX -> CodexAccent
+    AgentKind.PARALLAX_AI_RE -> ParallaxAiReAccent
 }
 
 /**

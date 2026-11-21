@@ -198,7 +198,7 @@ object JarvisTasks {
                 }
                 id
             }
-            AgentKind.OPENCODE -> {
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> {
                 val b = newOpenCodeBackend()
                 if (b.state.value.isBlocking) b.refreshStatus()
                 if (b.state.value.isBlocking) { b.stop(); error("OpenCode is not available: ${b.state.value.label}.") }
@@ -325,7 +325,7 @@ object JarvisTasks {
                 val enum = AgyHubClient.resolveModelEnum(vm.agyBackend.modelOfChat(t.id))
                 hub.sendUserPrompt(t.id, outgoing, enum).getOrElse { return "Could not send: ${it.message}" }
             }
-            AgentKind.OPENCODE -> {
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> {
                 if (vm.currentConversation.value?.id == t.id) {
                     vm.openCodeBackend.sendMessage(outgoing)
                 } else {
@@ -360,7 +360,7 @@ object JarvisTasks {
             }
             AgentKind.AGY -> hub.cancelCascadeInvocation(t.id).onFailure { return "Could not stop: ${it.message}" }
             AgentKind.PARALLAXAI -> hub.cancelCascadeInvocation(t.id).onFailure { return "Could not stop: ${it.message}" }
-            AgentKind.OPENCODE -> (openCodeBackends[t.id] ?: vm.openCodeBackend).interrupt(t.id).onFailure { return "Could not stop: ${it.message}" }
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> (openCodeBackends[t.id] ?: vm.openCodeBackend).interrupt(t.id).onFailure { return "Could not stop: ${it.message}" }
             AgentKind.CODEX -> (codexBackends[t.id] ?: vm.codexBackend).interrupt(t.id).onFailure { return "Could not stop: ${it.message}" }
         }
         if (!quiet) put(t.copy(state = State.STOPPED, updatedAt = System.currentTimeMillis(), note = "Stopped", reported = true))
@@ -395,7 +395,7 @@ object JarvisTasks {
     suspend fun fullReply(t: Task): String {
         val msgs = when (t.agent) {
             AgentKind.CLAUDE -> claudeBackends[t.id]?.messages?.value?.takeIf { it.isNotEmpty() } ?: runCatching { JarvisController.readChat(t.id) }.getOrDefault(emptyList())
-            AgentKind.OPENCODE -> openCodeBackends[t.id]?.messages?.value?.takeIf { it.isNotEmpty() } ?: runCatching { JarvisController.readChat(t.id) }.getOrDefault(emptyList())
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> openCodeBackends[t.id]?.messages?.value?.takeIf { it.isNotEmpty() } ?: runCatching { JarvisController.readChat(t.id) }.getOrDefault(emptyList())
             AgentKind.CODEX -> codexBackends[t.id]?.messages?.value?.takeIf { it.isNotEmpty() } ?: runCatching { JarvisController.readChat(t.id) }.getOrDefault(emptyList())
             AgentKind.AGY -> runCatching { JarvisController.readChat(t.id) }.getOrDefault(emptyList())
             AgentKind.PARALLAXAI -> runCatching { JarvisController.readChat(t.id) }.getOrDefault(emptyList())
@@ -483,7 +483,7 @@ object JarvisTasks {
             (vm.currentConversation.value?.id == t.id && vm.claudeBackend.isCurrentChatActivelyRunning.value)
         AgentKind.AGY -> agyBusy(t.id)
         AgentKind.PARALLAXAI -> agyBusy(t.id)
-        AgentKind.OPENCODE -> openCodeBackends[t.id]?.isCurrentChatActivelyRunning?.value == true ||
+        AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> openCodeBackends[t.id]?.isCurrentChatActivelyRunning?.value == true ||
             (vm.currentConversation.value?.id == t.id && vm.openCodeBackend.isCurrentChatActivelyRunning.value) ||
             vm.openCodeBackend.conversations.value.any { it.id == t.id && it.isRunning }
         AgentKind.CODEX -> codexBackends[t.id]?.isCurrentChatActivelyRunning?.value == true ||
@@ -551,7 +551,7 @@ object JarvisTasks {
                 needsApproval = running && agyPendingOf(t.id).isNotEmpty() ||
                     (vm.currentConversation.value?.id == t.id && vm.pendingApprovals.value.isNotEmpty())
             }
-            AgentKind.OPENCODE -> {
+            AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> {
                 val b = ensureOpenCodeBackend(t.id)
                 running = b.isCurrentChatActivelyRunning.value
                 needsApproval = b.pendingPermissions.value.isNotEmpty()

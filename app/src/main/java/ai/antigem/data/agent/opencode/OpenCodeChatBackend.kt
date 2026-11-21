@@ -69,10 +69,14 @@ class OpenCodeChatBackend(
     /** Model and agent picked in this backend become the defaults for new chats (false for Jarvis' own chat). */
     private val rememberChoices: Boolean = true,
     /** Extra permission rules for every chat of this backend (Jarvis' chat: no question forms nobody sees). */
-    private val extraRules: List<JsonObject> = emptyList()
+    private val extraRules: List<JsonObject> = emptyList(),
+    /** Agent kind this backend serves (OpenCode or OpenCode-powered variants). */
+    override val kind: AgentKind = AgentKind.OPENCODE
 ) : AgentChatBackend {
 
-    override val kind = AgentKind.OPENCODE
+    /** True when this backend should handle the given agent (OpenCode runtime powers OpenCode and Parallax AI RE). */
+    fun handlesAgent(agent: AgentKind?): Boolean = agent == AgentKind.OPENCODE || agent == AgentKind.PARALLAX_AI_RE
+    private fun isMyAgent(agent: AgentKind?) = handlesAgent(agent)
 
     private val _conversations = MutableStateFlow<List<Conversation>>(emptyList())
     override val conversations: StateFlow<List<Conversation>> = _conversations.asStateFlow()
@@ -181,7 +185,7 @@ class OpenCodeChatBackend(
         slashJob?.cancel()
         slashJob = backendScope.launch {
             delay(300) // a burst of skill.updated / command.updated events makes one read
-            val dir = store.currentConversation.value?.takeIf { it.agent == AgentKind.OPENCODE }?.let { workspacePath(it) }
+            val dir = store.currentConversation.value?.takeIf { isMyAgent(it.agent) }?.let { workspacePath(it) }
                 ?: defaultWorkspaceUri().removePrefix("file://").takeIf { it.startsWith("/") }
             val q = dir?.let { "?directory=" + java.net.URLEncoder.encode(it, "UTF-8") }.orEmpty()
             for (attempt in 0 until 4) {
@@ -219,6 +223,7 @@ class OpenCodeChatBackend(
         if (loopJob?.isActive == true) return
         loopJob = backendScope.launch {
             refreshStatus()
+            ensureParallaxAiReProvider()
             refreshModels()
             refreshAgents()
             refreshSlashCommands()
@@ -459,7 +464,7 @@ class OpenCodeChatBackend(
             val pick = prefs.model.value.takeIf { p -> list.any { it.id == p } }
                 ?: defaultModelId?.takeIf { d -> list.any { it.id == d } }
                 ?: list.firstOrNull()?.id.orEmpty()
-            if (store.currentConversation.value?.agent != AgentKind.OPENCODE || store.currentConversation.value?.id !in createdSnapshot()) {
+            if (store.currentConversation.value?.agent?.let { !isMyAgent(it) } != false || store.currentConversation.value?.id !in createdSnapshot()) {
                 _selectedModelId.value = pick
             }
         }
@@ -528,7 +533,11 @@ class OpenCodeChatBackend(
 
     // ------------------------------------------------------------------ AgentChatBackend
 
-    override fun startNewChat() {
+    override fun startNewChat() = startNewChatAs(kind)
+
+    /** Starts a new chat for a specific handled agent identity (e.g. OpenCode or Parallax AI RE). */
+    fun startNewChatAs(agentKind: AgentKind) {
+        val actualKind = if (isMyAgent(agentKind)) agentKind else kind
         val id = newId("ses", descending = true)
         val conv = Conversation(
             id = id,
@@ -536,7 +545,7 @@ class OpenCodeChatBackend(
             modelId = _selectedModelId.value,
             sessionId = id,
             workspaceUri = defaultWorkspaceUri(),
-            agent = AgentKind.OPENCODE
+            agent = actualKind
         )
         _selectedModelId.value = prefs.model.value.takeIf { p -> _availableModels.value.any { it.id == p } } ?: _selectedModelId.value
         _agent.value = prefs.agent.value
@@ -556,12 +565,13 @@ class OpenCodeChatBackend(
     /** The folder of the fresh chat (nothing sent yet). */
     fun setWorkspaceOfNewChat(path: String) {
         val conv = store.currentConversation.value ?: return
-        if (conv.agent != AgentKind.OPENCODE || conv.id in createdSnapshot() || path.isBlank()) return
+        if (!isMyAgent(conv.agent) || conv.id in createdSnapshot() || path.isBlank()) return
         store.currentConversation.value = conv.copy(workspaceUri = if (path.startsWith("file://")) path else "file://$path")
     }
 
     override fun selectConversation(id: String) {
         val conv = _conversations.value.find { it.id == id }
+            ?: localConversations[id]
             ?: Conversation(id = id, title = "OpenCode Chat", sessionId = id, agent = AgentKind.OPENCODE)
         store.currentConversation.value = conv
         if (conv.modelId.isNotBlank()) _selectedModelId.value = conv.modelId
@@ -650,7 +660,7 @@ class OpenCodeChatBackend(
         val atts = store.attachments.value
         if (content.isBlank() && atts.isEmpty()) return
         val conv = store.currentConversation.value ?: return
-        if (conv.agent != AgentKind.OPENCODE) return
+        if (!isMyAgent(conv.agent)) return
         if (_state.value.isBlocking) {
             _toasts.tryEmit("OpenCode is not available: ${_state.value.label}. Check Settings → OpenCode.")
             return
@@ -689,7 +699,7 @@ class OpenCodeChatBackend(
                     workspacePath(conv)?.let { dir -> put("location", buildJsonObject { put("directory", dir) }) }
                     modelRefJson(_selectedModelId.value)?.let { put("model", it) }
                     if (_agent.value.isNotBlank() && _agent.value != "build") put("agent", _agent.value)
-                    sessionRules(prefs.permissionMode.value, _agent.value)?.let { put("permissions", it) }
+                    sessionRules(effectivePermissionModeForSession(store.currentConversation.value?.id ?: attachedId), _agent.value)?.let { put("permissions", it) }
                 }
                 val r = client.post("/session", body)
                 if (r.isFailure) {
@@ -702,8 +712,8 @@ class OpenCodeChatBackend(
                 publishConversations()
             }
             // project checkpoint (when on): the files right before OpenCode gets the message
-            if (busy) ai.antigem.data.checkpoint.ProjectCheckpoints.beforeTurnInBackground(AgentKind.OPENCODE, conv.id, updated.workspaceUri, msgId, text)
-            else ai.antigem.data.checkpoint.ProjectCheckpoints.beforeTurn(AgentKind.OPENCODE, conv.id, updated.workspaceUri, msgId, text)
+            if (busy) ai.antigem.data.checkpoint.ProjectCheckpoints.beforeTurnInBackground(kind, conv.id, updated.workspaceUri, msgId, text)
+            else ai.antigem.data.checkpoint.ProjectCheckpoints.beforeTurn(kind, conv.id, updated.workspaceUri, msgId, text)
             val files = mutableListOf<JsonObject>()
             val notes = mutableListOf<String>()
             for (a in atts) attachmentPart(a, files, notes)
@@ -771,7 +781,7 @@ class OpenCodeChatBackend(
     suspend fun interrupt(id: String): Result<Unit> = client.post("/session/$id/interrupt").map { }
 
     override fun stopStreaming() {
-        val id = store.currentConversation.value?.takeIf { it.agent == AgentKind.OPENCODE }?.id ?: return
+        val id = store.currentConversation.value?.takeIf { isMyAgent(it.agent) }?.id ?: return
         backendScope.launch {
             client.post("/session/$id/interrupt").onFailure { _toasts.tryEmit("Could not stop: ${it.message}") }
         }
@@ -887,7 +897,7 @@ class OpenCodeChatBackend(
     fun selectModel(modelId: String) {
         _selectedModelId.value = modelId
         if (rememberChoices) prefs.setModel(modelId)
-        val conv = store.currentConversation.value?.takeIf { it.agent == AgentKind.OPENCODE } ?: return
+        val conv = store.currentConversation.value?.takeIf { isMyAgent(it.agent) } ?: return
         store.currentConversation.value = conv.copy(modelId = modelId)
         if (conv.id !in createdSnapshot()) return
         val ref = modelRefJson(modelId) ?: return
@@ -911,18 +921,18 @@ class OpenCodeChatBackend(
     fun selectAgent(agentId: String) {
         _agent.value = agentId
         if (rememberChoices) prefs.setAgent(agentId)
-        val conv = store.currentConversation.value?.takeIf { it.agent == AgentKind.OPENCODE } ?: return
+        val conv = store.currentConversation.value?.takeIf { isMyAgent(it.agent) } ?: return
         if (conv.id !in createdSnapshot()) return
         backendScope.launch {
             client.post("/session/${conv.id}/agent", buildJsonObject { put("agent", agentId) })
                 .onFailure { _toasts.tryEmit("Could not switch to $agentId: ${it.message}") }
-            client.api("PATCH", "/session/${conv.id}", buildJsonObject { put("permissions", sessionRules(prefs.permissionMode.value, agentId) ?: JsonArray(emptyList())) })
+            client.api("PATCH", "/session/${conv.id}", buildJsonObject { put("permissions", sessionRules(effectivePermissionModeForSession(conv.id), agentId) ?: JsonArray(emptyList())) })
         }
     }
 
     fun setPermissionMode(mode: String) {
         prefs.setPermissionMode(mode)
-        val conv = store.currentConversation.value?.takeIf { it.agent == AgentKind.OPENCODE } ?: return
+        val conv = store.currentConversation.value?.takeIf { isMyAgent(it.agent) } ?: return
         if (conv.id !in createdSnapshot()) return
         backendScope.launch {
             client.api("PATCH", "/session/${conv.id}", buildJsonObject { put("permissions", sessionRules(mode, _agent.value) ?: JsonArray(emptyList())) })
@@ -1183,6 +1193,63 @@ class OpenCodeChatBackend(
             transcript.compacting -> "Compacting the conversation…"
             else -> transcript.retryNotice
         }
+    }
+
+
+    // ------------------------------------------------------------------ Parallax AI RE auto-config
+
+    private val parallaxAiReProviderId = "parallax_re"
+    private val parallaxAiReModelId = "Huihui-Qwen3.5-4B-abliterated.Q4_K_M.gguf"
+    val parallaxAiReFullModelId get() = "$parallaxAiReProviderId/$parallaxAiReModelId"
+    private val parallaxAiReBaseUrl = "http://10.166.8.221:8080/v1"
+    @Volatile private var parallaxAiReEnsured = false
+
+    /** Ensures the OpenAI-compatible llama-server provider/model for Parallax AI RE exists in OpenCode. */
+    suspend fun ensureParallaxAiReProvider(): Boolean {
+        return try {
+            val existing = client.customProviders().getOrNull().orEmpty().find { it.id == parallaxAiReProviderId }
+            val desired = OpenCodeCustomProvider(
+                id = parallaxAiReProviderId,
+                name = "Parallax AI RE (llama-server)",
+                kind = "openai",
+                base_url = parallaxAiReBaseUrl,
+                api_key = "sk-local",
+                models = listOf(
+                    OpenCodeCustomModel(
+                        id = parallaxAiReModelId,
+                        name = "Huihui Qwen3.5 4B Abliterated",
+                        context_length = 4096,
+                        max_output_tokens = 2048,
+                        reasoning = false,
+                        no_tools = false,
+                        images = false
+                    )
+                )
+            )
+            if (existing == null || existing.base_url != desired.base_url || existing.models.none { it.id == parallaxAiReModelId }) {
+                client.saveCustomProvider(desired).getOrThrow()
+                refreshModels()
+            }
+            parallaxAiReEnsured = true
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not ensure Parallax AI RE provider: ${e.message}", e)
+            false
+        }
+    }
+
+    private fun ensureParallaxAiReProviderAsync() {
+        if (parallaxAiReEnsured) return
+        backendScope.launch { ensureParallaxAiReProvider() }
+    }
+
+    private fun effectivePermissionModeForSession(sessionId: String?): String {
+        val agent = sessionId?.let { id ->
+            store.currentConversation.value?.takeIf { it.id == id }?.agent
+                ?: localConversations[id]?.agent
+                ?: _conversations.value.find { it.id == id }?.agent
+        } ?: store.currentConversation.value?.agent
+        return if (agent == AgentKind.PARALLAX_AI_RE) OpenCodePreferences.MODE_AUTO else prefs.permissionMode.value
     }
 
     // ------------------------------------------------------------------ helpers

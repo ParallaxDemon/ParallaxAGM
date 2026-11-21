@@ -837,10 +837,11 @@ fun ChatHistoryDrawer(
                         visibleAgents.forEach { agent ->
                             val label = when (agent) {
                                 ai.antigem.domain.model.AgentKind.AGY -> "Antigravity"
-                                ai.antigem.domain.model.AgentKind.PARALLAXAI -> "Antigravity"
+                                ai.antigem.domain.model.AgentKind.PARALLAXAI -> "ParallaxAI"
                                 ai.antigem.domain.model.AgentKind.CLAUDE -> "Claude"
-                                ai.antigem.domain.model.AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> "OpenCode"
+                                ai.antigem.domain.model.AgentKind.OPENCODE -> "OpenCode"
                                 ai.antigem.domain.model.AgentKind.CODEX -> "Codex"
+                                ai.antigem.domain.model.AgentKind.PARALLAX_AI_RE -> "Parallax AI RE"
                             }
                             add(agent to label)
                         }

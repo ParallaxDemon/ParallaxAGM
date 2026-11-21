@@ -794,7 +794,7 @@ object JarvisMcp {
         return if (owner != caller) "That chat is a task of ${JarvisManagers.nameOf(owner)}: only that Jarvis chat directs it." else null
     }
 
-    private fun agentName(agent: AgentKind) = when (agent) { AgentKind.CLAUDE -> "Claude Code"; AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> "OpenCode"; AgentKind.CODEX -> "Codex"; AgentKind.AGY -> "Antigravity"; AgentKind.PARALLAXAI -> "ParallaxAI"; AgentKind.PARALLAX_AI_RE -> "Parallax AI RE" }
+    private fun agentName(agent: AgentKind) = when (agent) { AgentKind.CLAUDE -> "Claude Code"; AgentKind.OPENCODE -> "OpenCode"; AgentKind.CODEX -> "Codex"; AgentKind.AGY -> "Antigravity"; AgentKind.PARALLAXAI -> "ParallaxAI"; AgentKind.PARALLAX_AI_RE -> "Parallax AI RE" }
 
     /** Hidden in front of every task's goal: how a sub-agent of Jarvis works and reports, and its team's role. */
     private fun subAgentBrief(team: JarvisManagers.Team?): String = buildString {
@@ -1370,7 +1370,7 @@ object JarvisMcp {
             val m = findModel(wanted, modelsFor(kind)) ?: return error("No ${kind.name.lowercase()} model matches \"$wanted\".")
             JarvisPreferences.modelId.set(m.id)
             if (kind == AgentKind.CLAUDE && JarvisPreferences.currentChatId.value.isNotBlank()) JarvisController.jarvisClaude.selectModel(m.id)
-            if (kind == AgentKind.OPENCODE && JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name) JarvisController.jarvisOpenCode.selectModel(m.id)
+            if ((kind == AgentKind.OPENCODE || kind == AgentKind.PARALLAX_AI_RE) && (JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name || JarvisPreferences.currentChatAgent.value == AgentKind.PARALLAX_AI_RE.name)) JarvisController.jarvisOpenCode.selectModel(m.id)
             if (kind == AgentKind.CODEX && JarvisPreferences.currentChatAgent.value == AgentKind.CODEX.name) JarvisController.jarvisCodex.selectModel(m.id)
             return text("The Jarvis chat now uses ${m.displayName.ifBlank { m.id }}.")
         }

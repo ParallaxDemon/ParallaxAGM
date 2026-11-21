@@ -424,7 +424,7 @@ object JarvisController {
         if (id.isBlank()) return false
         return if (JarvisPreferences.currentChatAgent.value == AgentKind.CLAUDE.name) {
             jarvisClaude.isCurrentChatActivelyRunning.value
-        } else if (JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name) {
+        } else if ((JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name || JarvisPreferences.currentChatAgent.value == AgentKind.PARALLAX_AI_RE.name)) {
             jarvisOpenCode.isCurrentChatActivelyRunning.value
         } else if (JarvisPreferences.currentChatAgent.value == AgentKind.CODEX.name) {
             jarvisCodex.isCurrentChatActivelyRunning.value
@@ -501,7 +501,7 @@ object JarvisController {
         val id = JarvisPreferences.currentChatId.value
         val raw = if (JarvisPreferences.currentChatAgent.value == AgentKind.CLAUDE.name) {
             jarvisClaude.messages.value.lastOrNull { it.role == MessageRole.ASSISTANT && it.content.isNotBlank() }?.content
-        } else if (JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name) {
+        } else if ((JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name || JarvisPreferences.currentChatAgent.value == AgentKind.PARALLAX_AI_RE.name)) {
             jarvisOpenCode.messages.value.lastOrNull { it.role == MessageRole.ASSISTANT && it.content.isNotBlank() }?.content
         } else if (JarvisPreferences.currentChatAgent.value == AgentKind.CODEX.name) {
             jarvisCodex.messages.value.lastOrNull { it.role == MessageRole.ASSISTANT && it.content.isNotBlank() }?.content
@@ -1634,7 +1634,7 @@ object JarvisController {
         }
         var id = JarvisPreferences.currentChatId.value
         // a Jarvis chat deleted on the server is replaced by a fresh one
-        val gone = id.isNotBlank() && JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name && b.client.get("/session/$id").isFailure
+        val gone = id.isNotBlank() && (JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name || JarvisPreferences.currentChatAgent.value == AgentKind.PARALLAX_AI_RE.name) && b.client.get("/session/$id").isFailure
         if (id.isBlank() || JarvisPreferences.currentChatAgent.value != AgentKind.OPENCODE.name || gone) {
             b.startNewChat()
             delay(150)
@@ -1818,7 +1818,7 @@ object JarvisController {
                 }
             }
             AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> when {
-                id == JarvisPreferences.currentChatId.value && JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name -> jarvisOpenCode.selectModel(modelId)
+                id == JarvisPreferences.currentChatId.value && (JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name || JarvisPreferences.currentChatAgent.value == AgentKind.PARALLAX_AI_RE.name) -> jarvisOpenCode.selectModel(modelId)
                 vm.currentConversation.value?.id == id -> vm.openCodeBackend.selectModel(modelId)
                 JarvisTasks.openCodeBackendOf(id) != null -> JarvisTasks.openCodeBackendOf(id)!!.selectModel(modelId)
                 else -> vm.openCodeBackend.switchModelOf(id, modelId).getOrThrow()
@@ -2238,7 +2238,7 @@ object JarvisController {
         JarvisTasks.activeTasks().filter { it.agent == AgentKind.AGY && vm.currentConversation.value?.id != it.id }.forEach { add(agyOffscreenPerms(it.id, "task")) }
         val jarvisId = JarvisPreferences.currentChatId.value
         when {
-            JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name && jarvisId.isNotBlank() -> add(openCodePerms(jarvisOpenCode, "jarvis"))
+            (JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name || JarvisPreferences.currentChatAgent.value == AgentKind.PARALLAX_AI_RE.name) && jarvisId.isNotBlank() -> add(openCodePerms(jarvisOpenCode, "jarvis"))
             JarvisPreferences.currentChatAgent.value == AgentKind.CODEX.name && jarvisId.isNotBlank() -> add(codexPerms(jarvisCodex, "jarvis"))
             JarvisPreferences.currentChatAgent.value == AgentKind.CLAUDE.name || jarvisId.isBlank() -> add(claudePerms(jarvisClaude, "jarvis"))
             else -> add(agyOffscreenPerms(jarvisId, "jarvis"))

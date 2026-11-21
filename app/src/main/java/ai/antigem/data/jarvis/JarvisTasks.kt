@@ -135,7 +135,7 @@ object JarvisTasks {
 
     /** OpenCode task backends Jarvis reads approvals from. */
     fun openCodeTaskBackends(): List<Pair<Task, ai.antigem.data.agent.opencode.OpenCodeChatBackend>> =
-        _tasks.value.filter { it.agent == AgentKind.OPENCODE }.mapNotNull { t -> openCodeBackends[t.id]?.let { t to it } }
+        _tasks.value.filter { it.agent == AgentKind.OPENCODE || it.agent == AgentKind.PARALLAX_AI_RE }.mapNotNull { t -> openCodeBackends[t.id]?.let { t to it } }
 
     fun openCodeBackendOf(id: String): ai.antigem.data.agent.opencode.OpenCodeChatBackend? = openCodeBackends[id]
 

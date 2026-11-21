@@ -155,7 +155,7 @@ object JarvisDriver {
     /** The chat's messages as they are live (Claude, OpenCode); null when only the server has them (Antigravity). */
     fun liveMessages(id: String): List<ChatMessage>? = when (agentOf(id)) {
         AgentKind.CLAUDE -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.CLAUDE) vm.claudeBackend.messages.value else claude[id]?.messages?.value
-        AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.OPENCODE) vm.openCodeBackend.messages.value else openCode[id]?.messages?.value
+        AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> if (onScreen(id) && (vm.currentConversation.value?.agent == AgentKind.OPENCODE || vm.currentConversation.value?.agent == AgentKind.PARALLAX_AI_RE)) vm.openCodeBackend.messages.value else openCode[id]?.messages?.value
         AgentKind.CODEX -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.CODEX) vm.codexBackend.messages.value else codex[id]?.messages?.value
         AgentKind.AGY -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.AGY) vm.messages.value else null
         AgentKind.PARALLAXAI -> if (onScreen(id) && vm.currentConversation.value?.agent == AgentKind.AGY) vm.messages.value else null

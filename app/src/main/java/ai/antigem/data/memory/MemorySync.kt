@@ -121,7 +121,8 @@ object MemorySync {
         return runCatching {
             when (c.agent) {
                 AgentKind.CLAUDE -> vm.loadClaudeMessages(c.id)
-                AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> vm.loadOpenCodeMessages(c.id)
+                AgentKind.OPENCODE -> vm.loadOpenCodeMessages(c.id)
+                AgentKind.PARALLAX_AI_RE -> vm.loadParallaxAiReMessages(c.id)
                 AgentKind.CODEX -> vm.loadCodexMessages(c.id)
                 AgentKind.AGY -> {
                     val steps = hub.getCascadeTrajectorySteps(c.id).getOrNull().orEmpty()

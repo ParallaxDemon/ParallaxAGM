@@ -152,7 +152,8 @@ fun JarvisSettingsSectionPage(page: JarvisSettingsPage, cardBg: Color, cardBorde
         AgentKind.CLAUDE -> "Claude Code"
         AgentKind.AGY -> "Antigravity"
         AgentKind.PARALLAXAI -> "Antigravity"
-        AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> "OpenCode"
+        AgentKind.OPENCODE -> "OpenCode"
+        AgentKind.PARALLAX_AI_RE -> "Parallax AI RE"
         AgentKind.CODEX -> "Codex"
         null -> "the agent"
     }

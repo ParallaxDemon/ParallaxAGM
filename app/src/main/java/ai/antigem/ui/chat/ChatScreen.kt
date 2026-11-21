@@ -196,7 +196,7 @@ fun ChatScreen(
     }
     val newChatAgent by viewModel.newChatAgent.collectAsState()
     val isClaudeChat = currentConv?.agent == ai.antigem.domain.model.AgentKind.CLAUDE
-    val isOpenCodeChat = currentConv?.agent == ai.antigem.domain.model.AgentKind.OPENCODE || currentConv?.agent == ai.antigem.domain.model.AgentKind.PARALLAX_AI_RE
+    val isOpenCodeChat = currentConv?.agent == ai.antigem.domain.model.AgentKind.OPENCODE
     val isCodexChat = currentConv?.agent == ai.antigem.domain.model.AgentKind.CODEX
     val isParallaxChat = currentConv?.agent == ai.antigem.domain.model.AgentKind.PARALLAXAI
     /** The chat on screen is Antigravity's (its hub, bridge banners and sign-in apply). */

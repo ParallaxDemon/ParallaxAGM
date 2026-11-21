@@ -74,8 +74,8 @@ class OpenCodeChatBackend(
     override val kind: AgentKind = AgentKind.OPENCODE
 ) : AgentChatBackend {
 
-    /** True when this backend should handle the given agent (OpenCode runtime powers OpenCode and Parallax AI RE). */
-    fun handlesAgent(agent: AgentKind?): Boolean = agent == AgentKind.OPENCODE || agent == AgentKind.PARALLAX_AI_RE
+    /** True when this backend should handle the given agent. */
+    fun handlesAgent(agent: AgentKind?): Boolean = agent == AgentKind.OPENCODE
     private fun isMyAgent(agent: AgentKind?) = handlesAgent(agent)
 
     private val _conversations = MutableStateFlow<List<Conversation>>(emptyList())
@@ -223,7 +223,6 @@ class OpenCodeChatBackend(
         if (loopJob?.isActive == true) return
         loopJob = backendScope.launch {
             refreshStatus()
-            ensureParallaxAiReProvider()
             refreshModels()
             refreshAgents()
             refreshSlashCommands()
@@ -1196,61 +1195,7 @@ class OpenCodeChatBackend(
     }
 
 
-    // ------------------------------------------------------------------ Parallax AI RE auto-config
-
-    private val parallaxAiReProviderId = "parallax_re"
-    private val parallaxAiReModelId = "Huihui-Qwen3.5-4B-abliterated.Q4_K_M.gguf"
-    val parallaxAiReFullModelId get() = "$parallaxAiReProviderId/$parallaxAiReModelId"
-    private val parallaxAiReBaseUrl = "http://10.166.8.221:8080/v1"
-    @Volatile private var parallaxAiReEnsured = false
-
-    /** Ensures the OpenAI-compatible llama-server provider/model for Parallax AI RE exists in OpenCode. */
-    suspend fun ensureParallaxAiReProvider(): Boolean {
-        return try {
-            val existing = client.customProviders().getOrNull().orEmpty().find { it.id == parallaxAiReProviderId }
-            val desired = OpenCodeCustomProvider(
-                id = parallaxAiReProviderId,
-                name = "Parallax AI RE (llama-server)",
-                kind = "openai",
-                base_url = parallaxAiReBaseUrl,
-                api_key = "sk-local",
-                models = listOf(
-                    OpenCodeCustomModel(
-                        id = parallaxAiReModelId,
-                        name = "Huihui Qwen3.5 4B Abliterated",
-                        context_length = 4096,
-                        max_output_tokens = 2048,
-                        reasoning = false,
-                        no_tools = false,
-                        images = false
-                    )
-                )
-            )
-            if (existing == null || existing.base_url != desired.base_url || existing.models.none { it.id == parallaxAiReModelId }) {
-                client.saveCustomProvider(desired).getOrThrow()
-                refreshModels()
-            }
-            parallaxAiReEnsured = true
-            true
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not ensure Parallax AI RE provider: ${e.message}", e)
-            false
-        }
-    }
-
-    private fun ensureParallaxAiReProviderAsync() {
-        if (parallaxAiReEnsured) return
-        backendScope.launch { ensureParallaxAiReProvider() }
-    }
-
-    private fun effectivePermissionModeForSession(sessionId: String?): String {
-        val agent = sessionId?.let { id ->
-            store.currentConversation.value?.takeIf { it.id == id }?.agent
-                ?: localConversations[id]?.agent
-                ?: _conversations.value.find { it.id == id }?.agent
-        } ?: store.currentConversation.value?.agent
-        return if (agent == AgentKind.PARALLAX_AI_RE) OpenCodePreferences.MODE_AUTO else prefs.permissionMode.value
-    }
+    private fun effectivePermissionModeForSession(sessionId: String?): String = prefs.permissionMode.value
 
     // ------------------------------------------------------------------ helpers
 

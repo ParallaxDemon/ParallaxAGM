@@ -56,8 +56,7 @@ class AgentPreferences(context: Context) {
             return buildString {
                 if (AgentKind.AGY !in enabled) append(" --no-hub")
                 if (AgentKind.CLAUDE !in enabled) append(" --no-claude")
-                // Parallax AI RE uses OpenCode runtime; keep it running if either needs it.
-                if (AgentKind.OPENCODE !in enabled && AgentKind.PARALLAX_AI_RE !in enabled) append(" --no-opencode")
+                if (AgentKind.OPENCODE !in enabled) append(" --no-opencode")
                 if (AgentKind.CODEX !in enabled) append(" --no-codex")
             }
         }

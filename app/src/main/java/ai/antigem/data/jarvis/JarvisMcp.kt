@@ -1318,7 +1318,8 @@ object JarvisMcp {
 
     private fun modelsFor(agent: AgentKind): List<AiModel> = when (agent) {
         AgentKind.CLAUDE -> vm.claudeBackend.availableModels.value
-        AgentKind.OPENCODE, AgentKind.PARALLAX_AI_RE -> vm.openCodeBackend.availableModels.value
+        AgentKind.OPENCODE -> vm.openCodeBackend.availableModels.value
+        AgentKind.PARALLAX_AI_RE -> vm.parallaxAiReBackend.availableModels.value
         AgentKind.CODEX -> vm.codexBackend.availableModels.value
         AgentKind.AGY -> vm.agyBackend.enabledModels.value
         AgentKind.PARALLAXAI -> vm.agyBackend.enabledModels.value
@@ -1370,7 +1371,7 @@ object JarvisMcp {
             val m = findModel(wanted, modelsFor(kind)) ?: return error("No ${kind.name.lowercase()} model matches \"$wanted\".")
             JarvisPreferences.modelId.set(m.id)
             if (kind == AgentKind.CLAUDE && JarvisPreferences.currentChatId.value.isNotBlank()) JarvisController.jarvisClaude.selectModel(m.id)
-            if ((kind == AgentKind.OPENCODE || kind == AgentKind.PARALLAX_AI_RE) && (JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name || JarvisPreferences.currentChatAgent.value == AgentKind.PARALLAX_AI_RE.name)) JarvisController.jarvisOpenCode.selectModel(m.id)
+            if (kind == AgentKind.OPENCODE && JarvisPreferences.currentChatAgent.value == AgentKind.OPENCODE.name) JarvisController.jarvisOpenCode.selectModel(m.id)
             if (kind == AgentKind.CODEX && JarvisPreferences.currentChatAgent.value == AgentKind.CODEX.name) JarvisController.jarvisCodex.selectModel(m.id)
             return text("The Jarvis chat now uses ${m.displayName.ifBlank { m.id }}.")
         }

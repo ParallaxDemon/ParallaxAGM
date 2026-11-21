@@ -448,6 +448,9 @@ class ParallaxAiReChatBackend(
             put("messages", buildMessagesJson(convId, assistantId))
             put("tools", toolsJson())
             put("tool_choice", "auto")
+            // Qwen3.5 thinking mode can burn tokens into reasoning_content and return empty content.
+            // Disable thinking for fast, direct responses in the app agent.
+            put("chat_template_kwargs", JSONObject().put("enable_thinking", false))
         }
         val reqBuilder = Request.Builder().url(url)
             .header("Content-Type", "application/json")
@@ -474,11 +477,24 @@ class ParallaxAiReChatBackend(
                 val obj = runCatching { JSONObject(data) }.getOrNull() ?: continue
                 val choices = obj.optJSONArray("choices") ?: continue
                 val delta = choices.optJSONObject(0)?.optJSONObject("delta") ?: continue
-                val chunk = delta.optString("content", "")
-                if (chunk.isNotEmpty()) {
-                    content.append(chunk)
+                val chunk = if (delta.has("content") && !delta.isNull("content")) delta.optString("content", "") else ""
+                val reasoning = when {
+                    delta.has("reasoning_content") && !delta.isNull("reasoning_content") -> delta.optString("reasoning_content", "")
+                    delta.has("reasoning") && !delta.isNull("reasoning") -> delta.optString("reasoning", "")
+                    else -> ""
+                }
+                val textChunk = chunk
+                if (textChunk.isNotEmpty()) {
+                    content.append(textChunk)
                     withContext(Dispatchers.Main) {
                         updateAssistant(convId, assistantId) { it.copy(content = content.toString(), isStreaming = true) }
+                    }
+                } else if (reasoning.isNotEmpty() && content.isEmpty()) {
+                    // fallback: if model emits only reasoning, show it so the user isn't left with an empty reply
+                    withContext(Dispatchers.Main) {
+                        updateAssistant(convId, assistantId) { msg ->
+                            if (msg.content.isBlank()) msg.copy(content = reasoning, isStreaming = true) else msg
+                        }
                     }
                 }
                 val tcArr = delta.optJSONArray("tool_calls")
@@ -499,7 +515,11 @@ class ParallaxAiReChatBackend(
             val tcs = toolCalls.entries.sortedBy { it.key }.map { (_, v) ->
                 ToolCallReq(v.first.toString().ifBlank { "call_${UUID.randomUUID()}" }, v.second.toString(), v.third.toString().ifBlank { "{}" })
             }.filter { it.name.isNotBlank() }
-            return CompletionResult(content.toString(), tcs)
+            val finalContent = content.toString().ifBlank {
+                // if only reasoning arrived, use the last UI content
+                _messages.value.find { it.id == assistantId }?.content.orEmpty()
+            }
+            return CompletionResult(finalContent, tcs)
         }
     }
 
